@@ -46,7 +46,7 @@ over MCP. Read `README.md` and `docs/event.md` first.
     `PiiReader` also shows people, and `Admin` adds the tokens; a prefixed
     role stops the server at start.
 - `orrery.yaml` says what this repository builds: the service, its APIs,
-  and its logo, `logo.svg`. redgreen reads it from the repository and
+  and its logo, `logo.svg`. Muster reads it from the repository and
   writes it to Orrery; the app never describes itself.
 - `openapi.yaml` is the API port's REST routes as OpenAPI 3.1, named by
   `spec` in `orrery.yaml`. A route added to or removed from

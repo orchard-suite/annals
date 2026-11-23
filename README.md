@@ -158,7 +158,7 @@ how Graft, Ion, Microsoft 365, and a shell post.
 `orrery.yaml` at the repository root says what this repository builds: the
 service `github/orchard-suite/annals/cmd/annalsd`, the pillars it covers, the APIs
 it provides, and its logo, `logo.svg`, as the custom icon `annals`. The app
-never sends it anywhere. redgreen, the forge reader, reads it from the
+never sends it anywhere. Muster, the forge reader, reads it from the
 repository and writes the service and its APIs into each estate that reads
 this repository.
 
