@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0](https://github.com/orchard-suite/annals/compare/v0.0.28...v1.0.0) (2026-11-23)
+
+### ⚠ BREAKING CHANGES
+
+* **annals:** open the source in orchard ([32d81e2](https://github.com/orchard-suite/annals/commit/32d81e2c5d4093e7147f33c0c9fe91c08baf0204))
+
+### Features
+
+* **annals:** open the source in orchard ([32d81e2](https://github.com/orchard-suite/annals/commit/32d81e2c5d4093e7147f33c0c9fe91c08baf0204))
+
 ## [0.0.28](https://github.com/orchard-suite/annals/compare/v0.0.27...v0.0.28) (2026-11-22)
 
 ### Bug Fixes
