@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1](https://github.com/orchard-suite/annals/compare/v1.0.0...v1.0.1) (2026-11-23)
+
+### Bug Fixes
+
+* **annals:** take product area words from config ([ca5c78b](https://github.com/orchard-suite/annals/commit/ca5c78ba4056e95f15a16c09f61cf8c4af9382ec))
+
 ## [1.0.0](https://github.com/orchard-suite/annals/compare/v0.0.28...v1.0.0) (2026-11-23)
 
 ### ⚠ BREAKING CHANGES
