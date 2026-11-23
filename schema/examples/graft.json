@@ -1,0 +1,20 @@
+{
+  "at": "2026-10-31T14:10:00Z",
+  "source": "graft",
+  "event_key": "job:01JBX7:landing",
+  "actor": { "kind": "agent", "id": "graft-agent", "name": "Graft", "on_behalf_of": "user-0001" },
+  "agent": { "runtime": "claude-code", "model": "claude-fable-5-1", "harness": "graft" },
+  "authority": {
+    "token_id": "github-app:graft",
+    "scope": ["contents:write"],
+    "granted_by": "user-0001",
+    "approval": { "required": true, "by": "user-0001", "at": "2026-10-31T14:08:30Z" }
+  },
+  "action": {
+    "verb": "change.land",
+    "target": { "system": "github", "kind": "repository", "id": "example-org/example-repo", "title": "example-org/example-repo" },
+    "outcome": "ok"
+  },
+  "change": { "summary": "2 commits landed on main", "before_hash": "a1b2c3d", "after_hash": "e4f5a6b" },
+  "labels": { "job": "01JBX7", "mode": "change", "step": "landing" }
+}

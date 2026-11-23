@@ -1,0 +1,119 @@
+{{define "title"}}{{who .Event.Actor}} {{plain .Event.Action.Verb}} · annals{{end}}
+{{define "content"}}
+{{$e := .Event}}
+<p class="crumb"><a href="/records">Records</a><span aria-hidden="true">/</span><span>{{$e.Source}}</span></p>
+<div class="verdict">
+  <div>
+    <h1 class="say">{{template "say" $e}}</h1>
+    <p class="lede"><span class="out {{$e.Action.Outcome}}">{{$e.Action.Outcome}}</span> · <time datetime="{{$e.At.Format "2006-01-02T15:04:05Z07:00"}}">{{clock $e.At}}</time>, {{ago $e.At}} · posted by {{$e.Source}}</p>
+  </div>
+</div>
+{{if and $e.Action.Reason (ne $e.Action.Reason $e.Action.Verb)}}<p class="callout {{$e.Action.Outcome}}{{if eq $e.Action.Outcome "ok"}} plain{{end}}"><b>Reason.</b> {{$e.Action.Reason}}</p>{{end}}
+<div class="facts {{if $e.Authority}}n4{{else}}n3{{end}}">
+<section class="fact">
+  <h2>Who</h2>
+  <dl>
+    <dt>Actor</dt><dd><a href="{{actorURL $e.Actor}}">{{who $e.Actor}}</a></dd>
+    <dt>Kind</dt><dd>{{$e.Actor.Kind}}</dd>
+    {{if ne $e.Actor.ID (who $e.Actor)}}<dt>Id</dt><dd><code>{{$e.Actor.ID}}</code></dd>{{end}}
+    {{if and $e.Actor.Email (ne $e.Actor.Email (who $e.Actor))}}<dt>Email</dt><dd>{{$e.Actor.Email}}</dd>{{end}}
+    {{if $e.Actor.OnBehalfOf}}<dt>For</dt><dd><code>{{$e.Actor.OnBehalfOf}}</code></dd>{{end}}
+    {{if $e.Agent}}
+    <dt>Runtime</dt><dd>{{$e.Agent.Runtime}}</dd>
+    {{if $e.Agent.Model}}<dt>Model</dt><dd>{{$e.Agent.Model}}</dd>{{end}}
+    {{if $e.Agent.Harness}}<dt>Harness</dt><dd>{{$e.Agent.Harness}}</dd>{{end}}
+    {{if $e.Agent.SessionID}}<dt>Session</dt><dd><code>{{$e.Agent.SessionID}}</code></dd>{{end}}
+    {{end}}
+  </dl>
+</section>
+<section class="fact">
+  <h2>What</h2>
+  <dl>
+    <dt>Verb</dt><dd><span class="chip">{{$e.Action.Verb}}</span></dd>
+    {{if not $e.Action.Reason}}<dt>Outcome</dt><dd>{{$e.Action.Outcome}}</dd>{{end}}
+    {{if $e.Change}}
+    {{if $e.Change.Summary}}<dt>Change</dt><dd>{{$e.Change.Summary}}</dd>{{end}}
+    {{if $e.Change.BeforeHash}}<dt>Before</dt><dd><code>{{$e.Change.BeforeHash}}</code></dd>{{end}}
+    {{if $e.Change.AfterHash}}<dt>After</dt><dd><code>{{$e.Change.AfterHash}}</code></dd>{{end}}
+    {{end}}
+    {{if $e.Labels}}<dt>Labels</dt><dd>{{range $k, $v := $e.Labels}}<span class="chip">{{$k}}={{$v}}</span> {{end}}</dd>{{end}}
+  </dl>
+</section>
+<section class="fact">
+  <h2>Where</h2>
+  <dl>
+    {{if $e.Action.Target.Title}}<dt>Target</dt><dd><a href="{{targetURL $e.Action.Target}}">{{$e.Action.Target.Title}}</a></dd>{{end}}
+    <dt>Kind</dt><dd><a href="{{targetURL $e.Action.Target}}">{{$e.Action.Target.Kind}}</a></dd>
+    <dt>System</dt><dd>{{$e.Action.Target.System}}{{if ne $e.Action.Target.System $e.Source}}, posted by {{$e.Source}}{{end}}</dd>
+    <dt>Id</dt><dd><code>{{$e.Action.Target.ID}}</code>{{if eq $e.Action.Target.ID $e.Action.Verb}}<div class="dim small">The sender posted the verb as the target's id, so the record cannot say which {{$e.Action.Target.Kind}} it was.</div>{{end}}</dd>
+  </dl>
+</section>
+{{if $e.Authority}}<section class="fact">
+  <h2>Authority</h2>
+  <dl>
+    {{if $e.Authority.TokenID}}<dt>Token</dt><dd><code>{{$e.Authority.TokenID}}</code></dd>{{end}}
+    {{if $e.Authority.GrantedBy}}<dt>Granted by</dt><dd>{{$e.Authority.GrantedBy}}</dd>{{end}}
+    {{if $e.Authority.Scope}}<dt>Scope</dt><dd>{{range $e.Authority.Scope}}<span class="chip">{{.}}</span> {{end}}</dd>{{end}}
+    {{if $e.Authority.Approval}}<dt>Approval</dt><dd>{{if $e.Authority.Approval.Required}}required{{if $e.Authority.Approval.By}}, given by <b>{{$e.Authority.Approval.By}}</b>{{if not $e.Authority.Approval.At.IsZero}} at {{clock $e.Authority.Approval.At}}{{end}}{{else}}, <b class="ask">not yet given</b>{{end}}{{else}}not required{{end}}</dd>{{end}}
+  </dl>
+</section>
+{{end}}
+<section class="fact wide">
+  <h2>The record</h2>
+  <dl class="row">
+    <div><dt>Id</dt><dd><code>{{$e.ID}}</code></dd></div>
+    {{if not $e.Authority}}<div><dt>Authority</dt><dd>None recorded</dd></div>{{end}}
+    <div><dt>Received</dt><dd>{{clock $e.ReceivedAt}}</dd></div>
+    {{if $e.EventKey}}<div><dt>Sender's key</dt><dd><code>{{$e.EventKey}}</code></dd></div>{{end}}
+    {{if $e.TraceID}}<div><dt>Trace</dt><dd><code>{{$e.TraceID}}</code></dd></div>{{end}}
+  </dl>
+</section>
+</div>
+<section>
+  <div class="sect"><h2>Like this</h2><p>{{if gt .Near.Like 1}}One of <a class="jump" href="{{.Near.LikeAt}}">{{count .Near.Like}} records like it</a> by {{who $e.Actor}} within 12 hours either side{{with .Near.Outcomes}}: {{range $i, $o := .}}{{if $i}}, {{end}}<span class="{{if eq $o.Key "failed"}}red{{else if eq $o.Key "refused"}}amber{{end}}">{{count $o.Count}} {{$o.Key}}</span>{{end}}{{end}}.{{else}}The only record like it by {{who $e.Actor}} within 12 hours either side.{{end}}</p></div>
+  {{with .Near.Seq}}{{if gt (len .) 1}}<div class="likes">
+    <div class="strip" role="img" aria-label="Records like it, oldest to newest; this one is ringed">{{range .}}<span class="s-{{.Outcome}}{{if .Here}} here{{end}}" title="{{clock .At}}: {{.Outcome}}"></span>{{end}}</div>
+    <div class="strip-ticks"><span>{{hm (index . 0).At}}</span><span>this one, {{hm $e.At}}</span><span>{{hm (index . (sub (len .) 1)).At}}</span></div>
+  </div>{{end}}{{end}}
+</section>
+<section>
+  <div class="sect"><h2>Near it in time</h2><p>What {{who $e.Actor}} did just after and just before, whatever it was.</p></div>
+  <div class="sheet around self">
+    {{if .Near.After}}<div class="day">Just after</div>{{range .Near.After}}{{template "rec" .}}{{end}}{{end}}
+    <div class="day here-h">This record</div>
+    <div class="here">{{template "rec" $e}}</div>
+    {{if .Near.Before}}<div class="day">Just before</div>{{range .Near.Before}}{{template "rec" .}}{{end}}{{end}}
+  </div>
+</section>
+{{if $e.Parties}}
+<section>
+  <div class="sect"><h2>With <span class="count">{{len $e.Parties}}</span></h2></div>
+  <ul class="list sheet">
+  {{range $e.Parties}}
+    <li><div class="grow">
+      <span class="label">{{template "party" .}}</span> <span class="tag">{{.Role}}</span>{{if .External}} <span class="tag ask">outside</span>{{end}}
+      <div class="dim small">{{.Kind}}{{if .ID}}{{if ne .Kind "anyone"}} · <a href="{{partyURL .}}"><code>{{.ID}}</code></a>{{end}}{{end}}{{if and .Email .Name}} · {{.Email}}{{end}}</div>
+    </div></li>
+  {{end}}
+  </ul>
+</section>
+{{end}}
+{{if $e.Items}}
+<section>
+  <div class="sect"><h2>Touched <span class="count">{{len $e.Items}}</span></h2></div>
+  <ul class="list sheet">
+  {{range $e.Items}}
+    <li><div class="grow">
+      <span class="label">{{if .Title}}{{.Title}}{{else}}{{.ID}}{{end}}</span>{{if .Access}} <span class="tag">{{.Access}}</span>{{end}}{{if .Label}} <span class="tag">{{.Label}}</span>{{end}}
+      <div class="dim small">{{.System}}/{{.Kind}} · <code>{{.ID}}</code>{{if .Hash}} · <code>{{.Hash}}</code>{{end}}</div>
+    </div></li>
+  {{end}}
+  </ul>
+</section>
+{{end}}
+{{if .CausedBy}}<section><div class="sect"><h2>Set off by</h2></div>{{template "records" (days .CausedBy)}}</section>{{else if $e.Cause}}<section><div class="sect"><h2>Set off by</h2></div><p class="callout plain">The record <code>{{$e.Cause}}</code> from {{$e.Source}} has not arrived.</p></section>{{end}}
+{{if .Led}}<section><div class="sect"><h2>Led to <span class="count">{{len .Led}}</span></h2></div>{{template "records" (days .Led)}}</section>{{end}}
+{{if .Corrected}}<section><div class="sect"><h2>Corrects</h2></div>{{template "records" (days .Corrected)}}</section>{{end}}
+{{if .Corrections}}<section><div class="sect"><h2>Corrected by</h2></div>{{template "records" (days .Corrections)}}</section>{{end}}
+<details class="raw"><summary>The record as stored</summary><pre>{{.Raw}}</pre></details>
+{{end}}

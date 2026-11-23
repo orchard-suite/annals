@@ -1,0 +1,61 @@
+{{define "title"}}{{who .Actor}} · annals{{end}}
+{{define "content"}}
+{{$d := .D}}
+<p class="crumb"><a href="/records">Records</a><span aria-hidden="true">/</span><span>{{.Actor.Kind}}</span></p>
+<div class="verdict">
+  <div>
+    <h1><span class="k {{.Actor.Kind}}" title="{{.Actor.Kind}}"></span>{{who .Actor}}</h1>
+    <p class="lede"><code>{{.Actor.ID}}</code>{{if .Agent}} · {{.Agent.Runtime}}{{if .Agent.Model}} · {{.Agent.Model}}{{end}}{{if .Agent.Harness}} · {{.Agent.Harness}}{{end}}{{end}}{{if .Actor.OnBehalfOf}} · acting for <code>{{.Actor.OnBehalfOf}}</code>{{end}}</p>
+    <p class="lede"><b>{{count $d.Total}}</b> records {{$d.Within}}{{if $d.Total}}, {{$d.RoutinePct}}% routine{{end}}.{{if $d.Failed}} <span class="red">{{count $d.Failed}} failed.</span>{{end}}{{if $d.Refused}} <span class="amber">{{count $d.Refused}} refused.</span>{{end}}</p>
+  </div>
+  {{template "spans" .}}
+</div>
+{{if .Person}}
+<section class="sheet" style="margin-bottom:28px">
+  <div class="pad"><h2>One person</h2><p class="dim small" style="margin:6px 0 0">{{if .Person.Name}}{{.Person.Name}} · {{end}}{{.Person.Email}}{{if .Person.Left}} · <b>no longer in the directory</b>{{end}}. Every id below is this person, and this page counts them all.</p></div>
+  <ul class="list">
+  {{range .IDs}}
+    <li>
+      <div class="grow"><a href="/actors/{{path .ID}}"><code>{{.ID}}</code></a>{{if .ByHand}} <span class="tag">tied by an admin</span>{{end}}</div>
+      {{if and $.Admin .ByHand}}
+      <form method="post" action="/actors/{{path .ID}}/unlink">
+        <input type="hidden" name="back" value="/actors/{{path $.ID}}">
+        <button class="danger" type="submit">Untie</button>
+      </form>
+      {{end}}
+    </li>
+  {{end}}
+  </ul>
+</section>
+{{else if and .Admin (eq .Actor.Kind "person")}}
+<details class="tie sheet">
+  <summary>Same person as someone in the directory? <span>Tie this id to them</span></summary>
+  <p class="dim small pad" style="padding-bottom:0">The directory does not know this id. If it belongs to someone it does know, tie it to them, and every page counts them as one.</p>
+  <form method="post" action="/actors/{{path .ID}}/link" class="form">
+    <label><span>Their email or directory id</span><input type="text" name="person" required maxlength="256"></label>
+    <button class="primary" type="submit">Tie</button>
+  </form>
+</details>
+{{end}}
+{{template "alarm" $d}}
+{{template "pulse" (pulseOf $d false)}}
+<div class="cols">
+  <section class="look">
+    <div class="sect"><h2>Worth a look <span class="count">{{len $d.Look}}</span></h2></div>
+    <div class="sheet self">{{range $d.Groups}}<div class="day">{{.Name}} <span class="count">{{len .Shown | add (len .Hidden)}}</span></div>{{range .Shown}}{{template "look" .}}{{end}}{{if .Hidden}}<details class="more-of"><summary>{{len .Hidden}} more, {{lower .Name}}</summary>{{range .Hidden}}{{template "look" .}}{{end}}</details>{{end}}{{else}}<p class="none"><b>Nothing stands out.</b> Everything this actor did is routine.</p>{{end}}</div>
+  </section>
+  <section>
+    {{if $d.Folded}}<div class="sect"><h2>What it does, folded <span class="count">{{len $d.Folded}}</span></h2></div>
+    <div class="sheet self" style="margin-bottom:32px">{{range $d.Folded}}{{template "fold" .}}{{end}}</div>{{end}}
+    <div class="sect"><h2>By action <span class="count">{{len .Verbs}}</span></h2><p>Every verb in the window, by how many records.</p></div>
+    <div class="sheet">{{template "ranks" .Verbs}}</div>
+    {{if gt (len .Systems) 1}}<div class="sect" style="margin-top:32px"><h2>By system</h2></div>
+    <div class="sheet">{{template "ranks" .Systems}}</div>{{end}}
+  </section>
+</div>
+<section>
+  <div class="sect"><h2>Latest records</h2><p>The most recent day, folded. Every record is on the records page.</p></div>
+  {{template "records" (firstDay .Days)}}
+  <p class="more"><a class="button" href="/records?actor={{query .Actor.ID}}&amp;since={{$d.Window.Key}}">Every record by {{who .Actor}} {{$d.Within}} →</a></p>
+</section>
+{{end}}

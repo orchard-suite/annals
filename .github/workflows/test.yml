@@ -1,0 +1,24 @@
+name: Test
+
+on:
+  pull_request:
+  # The release calls this first, so a push to main runs it once.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      # make check starts its own ClickHouse in Docker, as it does on a laptop.
+      - run: make check

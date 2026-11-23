@@ -1,0 +1,41 @@
+{{define "title"}}Tokens · annals{{end}}
+{{define "content"}}
+<div class="verdict">
+  <div>
+    <h1>{{.Live}} sender {{if eq .Live 1}}token is{{else}}tokens are{{end}} live.{{if .Revoked}} <span class="quiet">{{.Revoked}} revoked.</span>{{end}}</h1>
+    <p class="lede">Each product posts with its own token, bound to one source. A token reads as <b>reader</b>, with people hidden, or as <b>pii</b>, with people shown. The secret is shown once; only its hash is kept.</p>
+  </div>
+</div>
+<section class="sheet">
+  <div class="pad"><h2>Issue a token</h2></div>
+  <form method="post" action="/tokens" class="form" style="padding-top:0">
+    <label><span>Name</span><input type="text" name="name" placeholder="billing prod" required maxlength="64"></label>
+    <label><span>Source it posts as</span><input type="text" name="source" placeholder="billing" required maxlength="64" pattern="[a-z0-9][a-z0-9._-]*"></label>
+    <label><span>Reads as</span><select name="reads">{{range .Levels}}<option value="{{.}}">{{if eq . "pii"}}pii, people shown{{else}}reader, people hidden{{end}}</option>{{end}}</select></label>
+    <button class="primary" type="submit">Issue token</button>
+  </form>
+  <p class="dim small pad" style="border-top:1px solid var(--rule)">Senders post to <code>{{.URL}}/v1/events</code> with <code>Authorization: Bearer &lt;token&gt;</code>. Retention: {{range $i, $r := .Retention}}{{if $i}}, {{end}}{{$r}}{{end}}.</p>
+</section>
+<section>
+  <div class="sect"><h2>Tokens <span class="count">{{len .Tokens}}</span></h2></div>
+  {{if .Tokens}}
+  <ul class="list sheet">
+  {{range .Tokens}}
+    <li class="{{if not .RevokedAt.IsZero}}revoked{{end}}">
+      <div class="grow">
+        <span class="label">{{.Name}}</span> <span class="chip">{{.Source}}</span> <span class="tag">reads as {{.Reads}}</span>{{if not .RevokedAt.IsZero}} <span class="out failed">revoked {{ago .RevokedAt}}</span>{{end}}
+        <div class="dim small">issued {{ago .Created}}{{if .CreatedBy}} by {{.CreatedBy}}{{end}} · {{if .LastUsed.IsZero}}never used{{else}}last used {{ago .LastUsed}}{{end}} · <code>{{.ID}}</code></div>
+      </div>
+      {{if .RevokedAt.IsZero}}
+      <form method="post" action="/tokens/{{.ID}}/revoke" onsubmit="return confirm('Revoke {{.Name}}? Its sender stops at once.')">
+        <button class="danger" type="submit">Revoke</button>
+      </form>
+      {{end}}
+    </li>
+  {{end}}
+  </ul>
+  {{else}}
+  <p class="empty">No tokens yet. Issue one above for each product that posts.</p>
+  {{end}}
+</section>
+{{end}}

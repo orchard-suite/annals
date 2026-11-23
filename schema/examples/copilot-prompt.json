@@ -1,0 +1,17 @@
+{
+  "at": "2026-11-04T16:02:11Z",
+  "source": "m365",
+  "event_key": "copilot:thread-91ac:msg-01",
+  "actor": { "kind": "person", "id": "user-0002", "name": "Plan Writer", "email": "writer@example.com" },
+  "agent": { "runtime": "copilot", "harness": "m365-copilot", "session_id": "thread-91ac" },
+  "action": {
+    "verb": "prompt.send",
+    "target": { "system": "m365-copilot", "kind": "thread", "id": "thread-91ac", "title": "Word" },
+    "outcome": "ok"
+  },
+  "items": [
+    { "system": "sharepoint", "kind": "file", "id": "file-33d0", "title": "Q4 plan.docx", "access": "read", "label": "Confidential" },
+    { "system": "sharepoint", "kind": "file", "id": "file-5e71", "title": "Budget.xlsx", "access": "read", "label": "General" }
+  ],
+  "labels": { "app": "word" }
+}

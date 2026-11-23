@@ -1,0 +1,392 @@
+openapi: 3.1.0
+info:
+  title: Annals events API
+  version: "1"
+  description: >-
+    One record of what every actor (person, agent, or system) did, posted by
+    every product. This is the API port (8081). Every route takes a bearer
+    token Annals issued; a token posts as one source and reads at one
+    level. A token that reads as reader sees every person as a ref such as
+    p-3f9a1c2b7e4d, with names and emails removed, and finds people only by
+    ref; one that reads as pii sees people. The event itself is
+    schema/event.json, described in words in docs/event.md.
+servers:
+  - url: https://annals.example.com
+security:
+  - bearer: []
+tags:
+  - name: events
+    description: Post and read events.
+  - name: tokens
+    description: The calling token.
+paths:
+  /v1/events:
+    post:
+      operationId: postEvents
+      summary: Store one event or a batch of events
+      description: >-
+        The body is one event or an array of at most 1000 events, with no
+        unknown fields. One event answers 201 when stored, 200 when the same
+        source and event_key was stored before, 422 when refused, and 500 when
+        it could not be stored. A batch always answers 200 with one receipt per
+        event, in order.
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/Event"
+                - type: array
+                  maxItems: 1000
+                  items:
+                    $ref: "#/components/schemas/Event"
+      responses:
+        "200":
+          description: The event was already stored, or a batch was read.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/Receipt"
+                  - $ref: "#/components/schemas/BatchResult"
+        "201":
+          description: The event was stored.
+          headers:
+            Location:
+              description: The stored event, /v1/events/{id}.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "413":
+          description: The body is over 8 MiB (reason too_large), or a batch holds over 1000 events (reason too_many).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "422":
+          description: The event was refused; reason says why.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: The event could not be stored (reason store_error).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    get:
+      operationId: listEvents
+      summary: List events, newest first
+      tags: [events]
+      parameters:
+        - name: since
+          in: query
+          description: RFC 3339, or a span back from now such as 24h or 7d.
+          schema:
+            type: string
+        - name: until
+          in: query
+          description: RFC 3339, or a span back from now such as 24h or 7d.
+          schema:
+            type: string
+        - name: actor
+          in: query
+          description: The actor's id, or a person's ref.
+          schema:
+            type: string
+        - name: party
+          in: query
+          description: A party's id, email, or ref. A reader token matches refs only.
+          schema:
+            type: string
+        - name: cause
+          in: query
+          description: An event_key; only the records it caused. Pair with source.
+          schema:
+            type: string
+        - name: source
+          in: query
+          description: The product that sent the event.
+          schema:
+            type: string
+        - name: system
+          in: query
+          description: The target's system.
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          description: How the action went.
+          schema:
+            type: string
+        - name: verb
+          in: query
+          description: The action's verb.
+          schema:
+            type: string
+        - name: kind
+          in: query
+          description: The target's kind.
+          schema:
+            type: string
+        - name: target
+          in: query
+          description: The target's id, or a ref when the target is a person.
+          schema:
+            type: string
+        - name: approval
+          in: query
+          description: With required, only events whose action needed an approval.
+          schema:
+            type: string
+            enum: [required]
+        - name: cursor
+          in: query
+          description: The next value of the page before.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: Events per page; 50 when unset, at most 500.
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: One page of events.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/StoreError"
+  /v1/events/{id}:
+    get:
+      operationId: getEvent
+      summary: Read one event
+      tags: [events]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: The id Annals gave the event.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The event.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: No event has this id (reason not_found).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/StoreError"
+  /v1/stats:
+    get:
+      operationId: getStats
+      summary: Count what Annals holds
+      tags: [events]
+      responses:
+        "200":
+          description: The counts.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/StoreError"
+  /v1/whoami:
+    get:
+      operationId: whoami
+      summary: Describe the calling token
+      tags: [tokens]
+      responses:
+        "200":
+          description: The token, without its secret.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: A token Annals issued on its token page. It posts as one source.
+  responses:
+    BadRequest:
+      description: The body or the query could not be read (reason bad_json or bad_filter).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: No bearer token (reason no_token), or one that is unknown or revoked (reason bad_token).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    StoreError:
+      description: The store could not be read (reason store_error).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  schemas:
+    Error:
+      type: object
+      description: >-
+        Every error the API writes. A refused or failed single event answers
+        with its receipt, which carries error and reason plus the receipt's
+        index, status, and event_key.
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: What went wrong, in words.
+        reason:
+          type: string
+          description: A short machine-readable reason, such as bad_token or not_found.
+        index:
+          type: integer
+          description: On a receipt only, always 0 for one event.
+        status:
+          type: string
+          enum: [refused, failed]
+          description: On a receipt only.
+        event_key:
+          type: string
+          description: On a receipt only, the sender's own id for the event, when it set one.
+    Event:
+      $ref: "./schema/event.json"
+    Receipt:
+      type: object
+      description: What happened to one posted event.
+      required: [index, status]
+      properties:
+        index:
+          type: integer
+          description: The event's place in a batch; 0 for one event.
+        id:
+          type: string
+          description: The event's id, when stored or already stored.
+        status:
+          type: string
+          enum: [stored, duplicate, refused, failed]
+        reason:
+          type: string
+          description: Why it was refused or failed.
+        error:
+          type: string
+          description: The refusal or failure, in words.
+        event_key:
+          type: string
+          description: The sender's own id for the event, when it set one.
+        duplicate:
+          type: boolean
+          description: True when the event was stored before.
+    BatchResult:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/Receipt"
+    Page:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        next:
+          type: string
+          description: The cursor for the next page; absent on the last.
+    Bucket:
+      type: object
+      required: [key, count]
+      properties:
+        key:
+          type: string
+        count:
+          type: integer
+    Stats:
+      type: object
+      required: [events, sources, outcomes, actors, tokens, db_bytes]
+      properties:
+        events:
+          type: integer
+        oldest:
+          type: string
+          format: date-time
+        newest:
+          type: string
+          format: date-time
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bucket"
+        outcomes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bucket"
+        actors:
+          type: integer
+          description: Distinct actors.
+        tokens:
+          type: integer
+          description: Live tokens.
+        db_bytes:
+          type: integer
+          format: int64
+    Token:
+      type: object
+      required: [id, name, source, reads, created]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        source:
+          type: string
+          description: The source this token posts as.
+        reads:
+          type: string
+          enum: [reader, pii]
+          description: How much of a person the token sees.
+        created:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+        last_used:
+          type: string
+          format: date-time

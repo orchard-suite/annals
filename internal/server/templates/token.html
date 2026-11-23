@@ -1,0 +1,15 @@
+{{define "title"}}New token · annals{{end}}
+{{define "content"}}
+<p class="crumb"><a href="/tokens">Tokens</a></p>
+<div class="verdict"><div>
+  <h1>The token for {{.Token.Name}}. <span class="red">Copy it now.</span></h1>
+  <p class="lede">It posts as <span class="chip">{{.Token.Source}}</span> and reads as <b>{{.Token.Reads}}</b>. It is not shown again; only its hash is kept.</p>
+</div></div>
+<section class="sheet"><div class="pad">
+  <span class="secret">{{.Secret}}</span>
+  <div><button class="primary" type="button" data-copy="{{.Secret}}">Copy token</button></div>
+  <p class="dim small">Try it:</p>
+  <pre class="small">curl -sS {{.URL}}/v1/whoami -H "Authorization: Bearer {{.Secret}}"</pre>
+</div></section>
+<p class="more"><a class="button" href="/tokens">Back to tokens</a></p>
+{{end}}

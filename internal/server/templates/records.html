@@ -1,0 +1,28 @@
+{{define "title"}}Records · annals{{end}}
+{{define "content"}}
+{{$d := .D}}
+<div class="verdict">
+  <div>
+    <h1>{{count $d.Total}} {{if .Active}}matching {{end}}records {{$d.Within}}.{{if $d.Failed}} <a class="red" href="?{{range $k, $vs := .Query}}{{if and (ne $k "outcome") (ne $k "cursor")}}{{range $vs}}{{query $k}}={{query .}}&amp;{{end}}{{end}}{{end}}outcome=failed">{{count $d.Failed}} failed.</a>{{end}}{{if $d.Refused}} <a class="amber" href="?{{range $k, $vs := .Query}}{{if and (ne $k "outcome") (ne $k "cursor")}}{{range $vs}}{{query $k}}={{query .}}&amp;{{end}}{{end}}{{end}}outcome=refused">{{count $d.Refused}} refused.</a>{{end}}</h1>
+    <p class="lede">Every record, newest first. Filter by who, product, system, outcome, or verb.</p>
+  </div>
+  {{template "spans" .}}
+</div>
+<form class="filters" method="get" action="/records" data-filter>
+  <input type="hidden" name="since" value="{{.Since}}">
+  {{with .Filter.TargetKind}}<input type="hidden" name="kind" value="{{.}}">{{end}}
+  {{with .Filter.TargetID}}<input type="hidden" name="target" value="{{.}}">{{end}}
+  {{with .Filter.Party}}<input type="hidden" name="party" value="{{.}}">{{end}}
+  <label><span>Who</span><input type="search" name="actor" value="{{.Filter.Actor}}" placeholder="An actor's id or email"></label>
+  <label><span>Product</span><select name="source"><option value="">Every product</option>{{$s := .Filter.Source}}{{range .Sources}}<option value="{{.Key}}" {{if eq .Key $s}}selected{{end}}>{{.Key}}</option>{{end}}</select></label>
+  <label><span>System</span><select name="system"><option value="">Every system</option>{{$y := .Filter.System}}{{range .Systems}}<option value="{{.Key}}" {{if eq .Key $y}}selected{{end}}>{{.Key}}</option>{{end}}</select></label>
+  <label><span>Outcome</span><select name="outcome"><option value="">Any outcome</option>{{$o := .Filter.Outcome}}{{range .Values}}<option value="{{.}}" {{if eq . $o}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+  <label><span>Verb</span><input type="search" name="verb" value="{{.Filter.Verb}}" placeholder="file.write"></label>
+  <div class="acts"><button class="primary" type="submit">Filter</button>{{if .Active}}<a class="button quiet" href="/records?since={{.Since}}">Clear</a>{{end}}</div>
+</form>
+{{if .Active}}<div class="active"><span>Showing</span>{{range .Active}}<a href="{{.Drop}}" title="Remove this filter"><b>{{.Name}}</b> {{.Value}} <span aria-hidden="true">×</span></a>{{end}}</div>{{end}}
+{{if $d.Pulse}}{{template "pulse" (pulseOf $d true)}}{{end}}
+<div class="sect"><h2>Records</h2><nav class="span" aria-label="Repeats">{{$q := .Query}}<a class="{{if not .Every}}on{{end}}" href="?{{range $k, $vs := $q}}{{if and (ne $k "every") (ne $k "cursor")}}{{range $vs}}{{query $k}}={{query .}}&amp;{{end}}{{end}}{{end}}">Fold repeats</a><a class="{{if .Every}}on{{end}}" href="?{{range $k, $vs := $q}}{{if and (ne $k "every") (ne $k "cursor")}}{{range $vs}}{{query $k}}={{query .}}&amp;{{end}}{{end}}{{end}}every=1">Every record</a></nav></div>
+{{template "records" .Days}}
+{{if .Next}}<p class="more"><a class="button" href="{{.Next}}">Older records</a></p>{{end}}
+{{end}}

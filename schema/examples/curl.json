@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-31T14:20:00Z",
+  "source": "ops",
+  "event_key": "deploy-2026-10-31-1",
+  "actor": { "kind": "person", "id": "user-0001", "name": "Operator" },
+  "action": {
+    "verb": "workload.restart",
+    "target": { "system": "kubernetes", "kind": "deployment", "id": "orrery/orrery-hub", "title": "Orrery hub" },
+    "outcome": "failed",
+    "reason": "rollout did not become ready in 5 minutes"
+  },
+  "labels": { "cluster": "home" }
+}

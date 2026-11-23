@@ -1,0 +1,32 @@
+{{define "title"}}Today · annals{{end}}
+{{define "content"}}
+{{$d := .D}}
+<div class="verdict">
+  <div>
+    <h1>{{count $d.Total}} records {{$d.Within}}. {{if $d.Total}}<span class="quiet">{{$d.RoutinePct}}% was routine.</span> {{with $d.Tallies}}Worth a look: {{range $i, $t := .}}{{if $i}}{{if $t.Last}}, and {{else}}, {{end}}{{end}}<span class="{{$t.Class}}">{{$t.Text}}</span>{{end}}.{{else}}Nothing stands out.{{end}}{{end}}</h1>
+    <p class="lede">{{count $d.Actors}} actors across {{len .Sources}} products. Anything an actor did {{.FoldAt}} times or more without a failure is folded into one routine line. <a class="jump" href="#routine">{{len $d.Folded}} routine lines, {{count $d.Routine}} records ↓</a></p>
+  </div>
+  {{template "spans" .}}
+</div>
+{{template "alarm" $d}}
+{{template "pulse" (pulseOf $d false)}}
+<div class="cols">
+  <section class="look">
+    <div class="sect"><h2>Worth a look <span class="count">{{len $d.Look}} · {{count $d.LookCount}} records</span></h2><p>What is new, what a person did, and what is rare, newest first. Failures are in red above.</p></div>
+    <div class="sheet">
+      {{range $d.Groups}}<div class="day">{{.Name}} <span class="count">{{len .Shown | add (len .Hidden)}}</span></div>{{range .Shown}}{{template "look" .}}{{end}}{{if .Hidden}}<details class="more-of"><summary>{{len .Hidden}} more, {{lower .Name}}</summary>{{range .Hidden}}{{template "look" .}}{{end}}</details>{{end}}{{else}}<p class="none"><b>Nothing stands out.</b> Every record in this window is routine.</p>{{end}}
+      <a class="all" href="/records?since={{$d.Window.Key}}">Every record {{$d.Within}} →</a>
+    </div>
+  </section>
+  <section id="routine">
+    <div class="sect"><h2>Routine, folded <span class="count">{{len $d.Folded}} · {{count $d.Routine}} records</span></h2><p>Repeating work, one line per actor and action, with its shape over the window. A line running hotter than usual says so. Open one for every record.</p></div>
+    <div class="sheet">
+      {{range $i, $f := $d.Folded}}{{if lt $i 8}}{{template "fold" $f}}{{end}}{{else}}<p class="none">Nothing repeated {{.FoldAt}} times in this window.</p>{{end}}
+      {{if gt (len $d.Folded) 8}}<details class="more-of"><summary>{{sub (len $d.Folded) 8}} more routine lines</summary>{{range $i, $f := $d.Folded}}{{if ge $i 8}}{{template "fold" $f}}{{end}}{{end}}</details>{{end}}
+      {{if $d.Views}}<a class="all quiet" href="/records?source=annals&amp;verb=people.view&amp;since={{$d.Window.Key}}">The board noted {{count $d.Views}} {{if eq $d.Views 1}}view{{else}}views{{end}} of people, by {{$d.Viewers}} {{if eq $d.Viewers 1}}viewer{{else}}viewers{{end}} →</a>{{end}}
+    </div>
+    <div class="sect" style="margin-top:32px"><h2>Who was active <span class="count">{{len $d.Busy}}</span></h2><p>Every actor in the window by how many records it made; red is the share that failed or was refused. Open one for its page.</p></div>
+    <div class="sheet">{{template "busy" $d.Busy}}</div>
+  </section>
+</div>
+{{end}}

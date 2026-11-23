@@ -1,0 +1,349 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/orchard-suite/annals/main/schema/event.json",
+  "title": "annals.Event",
+  "description": "One thing an actor did: who, for whom, with what authority, to what, with whom, and how it went. Annals keeps it as a record. It names people and things, never content or a secret. See docs/event.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "at",
+    "source",
+    "actor",
+    "action"
+  ],
+  "$defs": {
+    "short": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\n\\r\\x00]*$"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 512,
+      "not": {
+        "pattern": "[^\\s@<>\"']+@[^\\s@<>\"']+\\.[A-Za-z]{2,}"
+      },
+      "description": "Free text people read. Never an email address: a person goes in a person field."
+    },
+    "slug": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "ulid": {
+      "type": "string",
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "email": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "[^\\s@<>\"']+@[^\\s@<>\"']+\\.[A-Za-z]{2,}"
+    }
+  },
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/ulid",
+      "description": "Assigned by Annals. A sender never sets it."
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the action happened, RFC 3339."
+    },
+    "received_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When Annals stored it. Set by Annals."
+    },
+    "source": {
+      "$ref": "#/$defs/slug",
+      "description": "The product that sent it. Must match the token's source."
+    },
+    "event_key": {
+      "$ref": "#/$defs/short",
+      "description": "The sender's own id for the event. The same source and event_key is stored once."
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "agent",
+            "person",
+            "system"
+          ]
+        },
+        "id": {
+          "$ref": "#/$defs/short",
+          "description": "Stable: an agent's name, a person's Entra object id, a service's name. A person's email goes in email, not here."
+        },
+        "name": {
+          "$ref": "#/$defs/short"
+        },
+        "email": {
+          "$ref": "#/$defs/email"
+        },
+        "on_behalf_of": {
+          "$ref": "#/$defs/short",
+          "description": "The person id an agent or system acted for."
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime"
+      ],
+      "properties": {
+        "runtime": {
+          "enum": [
+            "ion",
+            "claude-code",
+            "codex",
+            "copilot",
+            "other"
+          ]
+        },
+        "model": {
+          "$ref": "#/$defs/short"
+        },
+        "session_id": {
+          "$ref": "#/$defs/short"
+        },
+        "harness": {
+          "$ref": "#/$defs/short"
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "token_id": {
+          "$ref": "#/$defs/short",
+          "description": "The id of the credential used, never the credential."
+        },
+        "scope": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/short"
+          }
+        },
+        "granted_by": {
+          "$ref": "#/$defs/short"
+        },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "required"
+          ],
+          "properties": {
+            "required": {
+              "type": "boolean"
+            },
+            "by": {
+              "$ref": "#/$defs/short"
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verb",
+        "target",
+        "outcome"
+      ],
+      "properties": {
+        "verb": {
+          "$ref": "#/$defs/slug",
+          "description": "What was done, noun.verb, such as file.write or job.approve."
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "system",
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "system": {
+              "$ref": "#/$defs/slug",
+              "description": "The system the target lives in, such as beacon or github."
+            },
+            "kind": {
+              "$ref": "#/$defs/slug"
+            },
+            "id": {
+              "$ref": "#/$defs/short"
+            },
+            "title": {
+              "$ref": "#/$defs/title"
+            }
+          }
+        },
+        "outcome": {
+          "enum": [
+            "ok",
+            "refused",
+            "failed"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/title",
+          "description": "Required when the outcome is refused or failed."
+        }
+      }
+    },
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "before_hash": {
+          "$ref": "#/$defs/short"
+        },
+        "after_hash": {
+          "$ref": "#/$defs/short"
+        },
+        "summary": {
+          "$ref": "#/$defs/title"
+        }
+      }
+    },
+    "trace_id": {
+      "$ref": "#/$defs/short"
+    },
+    "corrects": {
+      "$ref": "#/$defs/ulid",
+      "description": "The id of the event this one corrects. The old event stays."
+    },
+    "cause": {
+      "$ref": "#/$defs/short",
+      "description": "The event_key of the record from the same source that caused this one, such as the prompt behind a tool call."
+    },
+    "parties": {
+      "type": "array",
+      "maxItems": 50,
+      "description": "Who else was in the action: who a site was shared with, who was added. A party of kind person is shown only to those who may see people.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role",
+          "kind"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/$defs/slug"
+          },
+          "kind": {
+            "enum": [
+              "person",
+              "group",
+              "agent",
+              "system",
+              "anyone"
+            ]
+          },
+          "id": {
+            "$ref": "#/$defs/short"
+          },
+          "email": {
+            "$ref": "#/$defs/email"
+          },
+          "name": {
+            "$ref": "#/$defs/short"
+          },
+          "external": {
+            "type": "boolean"
+          }
+        },
+        "if": {
+          "properties": {
+            "kind": {
+              "not": {
+                "const": "anyone"
+              }
+            }
+          }
+        },
+        "then": {
+          "required": [
+            "id"
+          ]
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "maxItems": 100,
+      "description": "Things the action touched besides its target, such as the files an agent read. Names, never contents.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "system",
+          "kind",
+          "id"
+        ],
+        "properties": {
+          "system": {
+            "$ref": "#/$defs/slug"
+          },
+          "kind": {
+            "$ref": "#/$defs/slug"
+          },
+          "id": {
+            "$ref": "#/$defs/short"
+          },
+          "title": {
+            "$ref": "#/$defs/title"
+          },
+          "access": {
+            "$ref": "#/$defs/slug"
+          },
+          "label": {
+            "$ref": "#/$defs/short"
+          },
+          "hash": {
+            "$ref": "#/$defs/short"
+          }
+        }
+      }
+    },
+    "labels": {
+      "type": "object",
+      "maxProperties": 16,
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9._-]*$",
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 64,
+        "pattern": "^[^\\n\\r\\x00]*$",
+        "not": {
+          "pattern": "[^\\s@<>\"']+@[^\\s@<>\"']+\\.[A-Za-z]{2,}"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+# What this repository builds, for Orrery. redgreen, the forge reader, reads
+# this file from the repository and writes the service, the APIs it
+# provides, and the APIs it calls into each estate that reads this
+# repository; the app itself writes nothing. `fields` and `relations` place
+# it in the estate's platform pillars (plat_pillar); an API key is the
+# providing service's key and its id.
+service: github/orchard-suite/annals/cmd/annalsd
+icon:
+  name: annals
+  file: logo.svg
+fields:
+  category: Audit
+relations:
+  pillars:
+  - platform/agents
+  - platform/security
+  - platform/actions
+provides:
+- id: events
+  title: Annals events API
+  kind: rest
+  description: One record of what every actor (person, agent, or system) did, posted by every product.
+  spec: openapi.yaml

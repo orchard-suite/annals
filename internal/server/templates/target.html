@@ -1,0 +1,32 @@
+{{define "title"}}{{targetName .Target}} · annals{{end}}
+{{define "content"}}
+{{$d := .D}}
+<p class="crumb"><a href="/records">Records</a><span aria-hidden="true">/</span><span>{{.Target.System}}</span><span aria-hidden="true">/</span><span>{{.Target.Kind}}</span></p>
+<div class="verdict">
+  <div>
+    <h1>{{if .Target.Title}}{{.Target.Title}}{{else}}A {{kindWords .Target.Kind}} in {{.Target.System}}{{end}}</h1>
+    <p class="lede">{{if .Target.Title}}{{kindWords .Target.Kind}} in {{.Target.System}} · {{end}}<code>{{.Target.ID}}</code></p>
+    <p class="lede"><b>{{count .Total}}</b> records touched it{{if $d.Window.Key}}, <b>{{count $d.Total}}</b> of them {{$d.Within}}{{else}} {{$d.Within}}{{end}}.{{if $d.Failed}} <span class="red">{{count $d.Failed}} failed.</span>{{end}}{{if $d.Refused}} <span class="amber">{{count $d.Refused}} refused.</span>{{end}}</p>
+  </div>
+  {{template "spans" .}}
+</div>
+{{template "alarm" $d}}
+{{template "pulse" (pulseOf $d true)}}
+<div class="cols">
+  <section class="look">
+    {{with .First}}<div class="sect"><h2>First record</h2><p>The oldest record that touched it.</p></div>
+    <div class="sheet" style="margin-bottom:32px">{{template "rec" .}}</div>{{end}}
+    <div class="sect"><h2>Worth a look <span class="count">{{len $d.Look}}</span></h2></div>
+    <div class="sheet here-target">{{range $d.Groups}}<div class="day">{{.Name}} <span class="count">{{len .Shown | add (len .Hidden)}}</span></div>{{range .Shown}}{{template "look" .}}{{end}}{{if .Hidden}}<details class="more-of"><summary>{{len .Hidden}} more, {{lower .Name}}</summary>{{range .Hidden}}{{template "look" .}}{{end}}</details>{{end}}{{else}}<p class="none"><b>Nothing stands out.</b> Everything that touched it is routine.</p>{{end}}</div>
+  </section>
+  <section>
+    <div class="sect"><h2>Who touched it</h2></div><div class="sheet">{{template "busy" $d.Busy}}</div>
+    <div class="sect" style="margin-top:32px"><h2>What they did</h2></div><div class="sheet">{{template "ranks" .Verbs}}</div>
+  </section>
+</div>
+<section>
+  <div class="sect"><h2>Everything that touched it</h2></div>
+  {{template "records" .Days}}
+  {{if .Next}}<p class="more"><a class="button" href="{{.Next}}">Older records</a></p>{{end}}
+</section>
+{{end}}

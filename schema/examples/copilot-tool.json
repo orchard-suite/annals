@@ -1,0 +1,17 @@
+{
+  "at": "2026-11-04T16:02:13Z",
+  "source": "m365",
+  "event_key": "copilot:thread-91ac:msg-01:tool-1",
+  "cause": "copilot:thread-91ac:msg-01",
+  "actor": { "kind": "agent", "id": "m365-copilot", "name": "Microsoft 365 Copilot", "on_behalf_of": "user-0002" },
+  "agent": { "runtime": "copilot", "harness": "m365-copilot", "session_id": "thread-91ac" },
+  "action": {
+    "verb": "tool.call",
+    "target": { "system": "m365-copilot", "kind": "tool", "id": "comet.search_projects", "title": "Comet project search" },
+    "outcome": "ok"
+  },
+  "items": [
+    { "system": "comet", "kind": "project", "id": "proj-4410", "title": "Spring launch", "access": "read" }
+  ],
+  "labels": { "plugin": "comet" }
+}

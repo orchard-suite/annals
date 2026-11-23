@@ -1,0 +1,16 @@
+{
+  "at": "2026-11-04T15:20:07Z",
+  "source": "m365",
+  "event_key": "ual:00000000-0000-0000-0000-000000000004",
+  "actor": { "kind": "person", "id": "user-0001", "name": "Site Owner", "email": "owner@example.com" },
+  "action": {
+    "verb": "site.share",
+    "target": { "system": "sharepoint", "kind": "site", "id": "site-7c2e", "title": "Finance Close" },
+    "outcome": "ok"
+  },
+  "parties": [
+    { "role": "recipient", "kind": "person", "id": "guest-0042", "email": "auditor@example.org", "name": "Outside Auditor", "external": true }
+  ],
+  "change": { "summary": "edit access through a direct invitation" },
+  "labels": { "operation": "sharinginvitationcreated", "workload": "sharepoint" }
+}

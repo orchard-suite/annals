@@ -1,0 +1,112 @@
+{{/* One record as a sentence: who did what to what. */}}
+{{define "say"}}<a class="actor" href="{{actorURL .Actor}}"><span class="k {{.Actor.Kind}}" title="{{.Actor.Kind}}"></span>{{who .Actor}}</a> <span class="verb">{{verbWords .Action}}</span> <a class="target" href="{{targetURL .Action.Target}}">{{targetSaid .Action}}</a>{{with .Parties}} <span class="of">with {{template "party" index . 0}}{{if gt (len .) 1}} and {{len (slice . 1)}} more{{end}}</span>{{end}}{{end}}
+
+{{/* The facts under a record's sentence. */}}
+{{define "meta"}}<span class="chip">{{.Action.Verb}}</span><span>{{.Source}}</span>{{if .Agent}}<span>{{.Agent.Runtime}}{{if .Agent.Model}} · {{.Agent.Model}}{{end}}</span>{{end}}{{if .Actor.OnBehalfOf}}<span>for {{.Actor.OnBehalfOf}}</span>{{end}}{{if and .Authority .Authority.Approval .Authority.Approval.Required}}<span class="ask">{{if .Authority.Approval.By}}approved by {{.Authority.Approval.By}}{{else}}awaiting approval{{end}}</span>{{end}}{{with .Items}}<span>touched {{len .}}</span>{{end}}{{if .Cause}}<span>set off by an earlier record</span>{{end}}{{if .Corrects}}<span>corrects an earlier record</span>{{end}}{{if and .Action.Reason (ne .Action.Reason .Action.Verb)}}<span class="why">“{{.Action.Reason}}”</span>{{end}}{{end}}
+
+{{/* One record as a row of a stream. */}}
+{{define "rec"}}
+<div class="rec">
+  <a class="t" href="/events/{{.ID}}" title="{{clock .At}}, open the record"><time datetime="{{.At.Format "2006-01-02T15:04:05Z07:00"}}">{{hm .At}}</time></a>
+  <div class="say">{{template "say" .}}<div class="meta">{{template "meta" .}}</div></div>
+  {{if ne .Action.Outcome "ok"}}<span class="out {{.Action.Outcome}}">{{.Action.Outcome}}</span>{{end}}
+</div>
+{{end}}
+
+{{/* Records, newest first, under a header for each day, with runs of the
+     same thing folded into one line that opens to every record. */}}
+{{define "records"}}
+{{if .}}
+<div class="sheet{{if (index . 0).Self}} self{{end}}">
+{{range .}}
+  <div class="day">{{.Label}}</div>
+  {{range .Runs}}
+  {{if eq .Count 1}}{{template "rec" .First}}{{else}}{{$e := .First}}{{$r := .}}
+  <details class="run">
+    <summary class="rec">
+      <span class="t"><time datetime="{{.Last.At.Format "2006-01-02T15:04:05Z07:00"}}">{{hm .Last.At}}</time><span class="span-to">{{hm $e.At}}</span></span>
+      <span class="say"><span class="actor"><span class="k {{$e.Actor.Kind}}" title="{{$e.Actor.Kind}}"></span>{{if gt .Actors 1}}{{.Actors}} actors{{else}}{{who $e.Actor}}{{end}}</span> <span class="verb">{{verbFor $e.Action .Targets}}</span>{{if not .Here}} <span class="target">{{if gt .Targets 1}}{{targetsSaid $e.Action .Targets}}{{else}}{{targetSaid $e.Action}}{{end}}</span>{{end}}
+        <span class="meta"><span class="times">{{count .Count}} times</span>{{if gt .Spread 1}}<span>about {{.PerHour}} an hour, in {{.Spread}} hours</span>{{end}}<span class="chip">{{$e.Action.Verb}}</span><span>{{$e.Source}}</span><span class="open">Show each</span></span></span>
+      <span class="runside">{{if ne $e.Action.Outcome "ok"}}<span class="out {{$e.Action.Outcome}}">{{$e.Action.Outcome}}</span>{{end}}{{if gt .Spread 1}}{{spark .Hours 0}}{{end}}</span>
+    </summary>
+    <div class="each">{{range .Shown}}{{template "rec" .}}{{end}}{{with .Rest}}<a class="all" href="{{.}}">All {{count $r.Count}} in the records →</a>{{end}}</div>
+  </details>
+  {{end}}
+  {{end}}
+{{end}}
+</div>
+{{else}}
+<p class="empty">No records match, in this window.</p>
+{{end}}
+{{end}}
+
+{{/* A routine pattern folded into one line. */}}
+{{define "fold"}}
+<a class="fold" href="{{.Records}}">
+  <span class="n">{{count .Count}}<small>{{if eq .Count 1}}time{{else}}times{{end}}</small></span>
+  <span class="say"><span class="actor"><span class="k {{.Latest.Actor.Kind}}" title="{{.Latest.Actor.Kind}}"></span>{{who .Latest.Actor}}</span> <span class="verb">{{verbFor .Latest.Action .Targets}}</span> <span class="target">{{if gt .Targets 1}}{{targetsSaid .Latest.Action .Targets}}{{else}}{{targetSaid .Latest.Action}}{{end}}</span>
+    <span class="meta">{{if eq .Why.Word "spike"}}<span class="out spike" title="{{count .Usual}} in the window before">{{ratio .Count .Usual}}× its usual</span>{{end}}<span class="chip">{{.Latest.Action.Verb}}</span><span>{{.Latest.Source}}</span><span>last {{when .Latest.At}}</span></span></span>
+  {{spark .Steps .Peak}}
+</a>
+{{end}}
+
+{{/* A rare or bad pattern: its newest record, and how many it stands for. */}}
+{{define "look"}}
+<a class="fold{{if .Again}} again{{end}}" href="{{if and (eq .Count 1) (eq .Actors 1)}}/events/{{.Latest.ID}}{{else}}{{.Records}}{{end}}">
+  <span class="n"><time datetime="{{.Latest.At.Format "2006-01-02T15:04:05Z07:00"}}">{{when .Latest.At}}</time>{{if gt .Count 1}}<b>{{count .Count}} times</b>{{end}}</span>
+  <span class="say">{{if gt .Actors 1}}<span class="actor"><span class="k {{.Latest.Actor.Kind}}" title="{{.Latest.Actor.Kind}}"></span>{{.Actors}} actors</span>{{else}}<span class="actor"><span class="k {{.Latest.Actor.Kind}}" title="{{.Latest.Actor.Kind}}"></span>{{who .Latest.Actor}}</span>{{end}} <span class="verb">{{verbFor .Latest.Action .Targets}}</span> <span class="target">{{if gt .Targets 1}}{{targetsSaid .Latest.Action .Targets}}{{else}}{{targetSaid .Latest.Action}}{{end}}</span>
+    <span class="meta">{{if .First}}<span class="out why">first record</span>{{end}}{{if gt .Actors 1}}<span>latest by {{who .Latest.Actor}}</span><span class="chip">{{.Latest.Action.Verb}}</span><span>{{.Latest.Source}}</span>{{else}}{{template "meta" .Latest}}{{end}}</span>{{with .LatestBad}}{{if ne .ID $.Latest.ID}}<span class="meta bad">last {{.Action.Outcome}} {{when .At}}{{if and .Action.Reason (ne .Action.Reason .Action.Verb)}}: “{{.Action.Reason}}”{{end}}{{if .Action.Target.Title}} on {{.Action.Target.Title}}{{end}}</span>{{end}}{{end}}</span>
+  {{template "why" .}}
+</a>
+{{end}}
+
+{{/* Why a pattern is worth a look. */}}
+{{define "why"}}{{$w := .Why.Word}}{{if eq $w "failed"}}<span class="out failed">{{if gt .Count 1}}{{.Failed}} of {{count .Count}} failed{{else}}failed{{end}}</span>{{else if eq $w "refused"}}<span class="out refused">{{if gt .Count 1}}{{.Refused}} of {{count .Count}} refused{{else}}refused{{end}}</span>{{else if eq $w "spike"}}<span class="out spike" title="{{count .Usual}} in the window before">{{ratio .Count .Usual}}× its usual</span>{{end}}{{end}}
+
+{{/* The pulse of a window. */}}
+{{define "pulse"}}
+<section class="pulse{{if .Small}} small{{end}}" aria-label="Records per {{stepName .D.Window}}">
+  <div class="key">
+    <span><i class="i-bad"></i>failed or refused</span>
+    <span><i class="i-rest"></i>worth a look</span><span><i class="i-routine"></i>routine</span>
+    <span class="peak">busiest {{stepName .D.Window}}: {{count .D.Max}} · times in {{zone}}</span>
+  </div>
+  <div class="bars">{{$max := .D.Max}}{{range .D.Pulse}}<div class="b" title="{{.Tip}}"><span class="i-routine" style="height:{{pct .Routine $max}}%"></span><span class="i-rest" style="height:{{pct .Rest $max}}%"></span>{{if .Bad}}<span class="i-bad" style="height:{{pct .Bad $max}}%"></span>{{end}}</div>{{end}}<div class="hits">{{range .D.Pulse}}<a href="{{.Href}}" title="{{.Tip}}. Open these records." aria-label="{{.Tip}}. Open these records."></a>{{end}}</div></div>
+  <div class="ticks" aria-hidden="true">{{range .D.Pulse}}<span{{if .Minor}} class="minor"{{end}}>{{.Label}}</span>{{end}}</div>
+</section>
+{{end}}
+
+{{define "party"}}{{if .Name}}{{.Name}}{{else if .Email}}{{.Email}}{{else if .ID}}{{.ID}}{{else}}anyone with the link{{end}}{{end}}
+
+{{/* The window switch, keeping every other part of the query. */}}
+{{define "spans"}}
+<nav class="span" aria-label="Window">
+{{$cur := .Since}}{{$q := .Query}}
+{{range .Spans}}<a class="{{if eq .Key $cur}}on{{end}}" href="?{{range $k, $vs := $q}}{{if and (ne $k "since") (ne $k "cursor")}}{{range $vs}}{{query $k}}={{query .}}&amp;{{end}}{{end}}{{end}}since={{.Key}}"{{if eq .Key $cur}} aria-current="true"{{end}}>{{.Label}}</a>{{end}}
+</nav>
+{{end}}
+
+{{/* A ranked list: who or what, how many, as a bar. */}}
+{{define "ranks"}}
+{{if .}}
+<ul class="ranks">
+{{$max := (index . 0).Count}}
+{{range .}}<li><span>{{if .Label}}{{.Label}}{{else if .Key}}{{.Key}}{{else}}<i class="dim">none</i>{{end}}</span><span class="bar"><span style="width:{{pct .Count $max}}%"></span></span><span class="n">{{count .Count}}</span></li>{{end}}
+</ul>
+{{else}}<p class="none">None in this window.</p>{{end}}
+{{end}}
+
+{{/* Who was active in a window, busiest first. */}}
+{{define "busy"}}
+{{if .}}
+{{$max := (index . 0).Count}}
+<ul class="ranks">
+{{range $i, $b := .}}{{if lt $i 8}}{{template "busyrow" (busyOf $b $max)}}{{end}}{{end}}
+</ul>
+{{if gt (len .) 8}}<details class="more-of"><summary>{{sub (len .) 8}} more, each with fewer records</summary><ul class="ranks">{{range $i, $b := .}}{{if ge $i 8}}{{template "busyrow" (busyOf $b $max)}}{{end}}{{end}}</ul></details>{{end}}
+{{else}}<p class="none">Nobody acted in this window.</p>{{end}}
+{{end}}
+{{define "busyrow"}}<li><a class="who" href="{{actorURL .B.Actor}}"><span class="k {{.B.Actor.Kind}}" title="{{.B.Actor.Kind}}"></span>{{who .B.Actor}}</a><span class="bar"><span style="width:{{pct (sub .B.Count .B.Bad) .Max}}%"></span>{{if .B.Bad}}<i style="width:{{pct .B.Bad .Max}}%"></i>{{end}}</span><span class="n">{{count .B.Count}}</span></li>{{end}}
+
+{{/* The patterns that failed or were refused, under a page's verdict. */}}
+{{define "alarm"}}{{with .Alarm}}<div class="alarm" role="note"><h2>Failed or refused</h2><ul>{{range .}}<li><a href="{{if eq .Count 1}}/events/{{.Latest.ID}}{{else}}{{.Records}}{{end}}"><span class="say"><span class="actor"><span class="k {{.Latest.Actor.Kind}}"></span>{{who .Latest.Actor}}</span> <span class="verb">{{verbFor .Latest.Action .Targets}}</span> <span class="target">{{if gt .Targets 1}}{{targetsSaid .Latest.Action .Targets}}{{else}}{{targetSaid .Latest.Action}}{{end}}</span></span> {{template "why" .}}{{with .LatestBad}}<span class="meta bad">last {{.Action.Outcome}} {{when .At}}{{if and .Action.Reason (ne .Action.Reason .Action.Verb)}}: “{{.Action.Reason}}”{{end}}</span>{{end}}</a></li>{{end}}</ul></div>{{end}}{{end}}

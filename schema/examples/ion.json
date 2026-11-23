@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-31T14:12:45Z",
+  "source": "ion",
+  "event_key": "run:9f8e7d6c:tool:toolu_01",
+  "actor": { "kind": "agent", "id": "ion:conversation:c0ffee", "name": "Ion session", "on_behalf_of": "user-0001" },
+  "agent": { "runtime": "ion", "model": "claude-fable-5-1", "session_id": "sk_7a1b", "harness": "ion-engine" },
+  "action": {
+    "verb": "tool.bash",
+    "target": { "system": "workstation", "kind": "directory", "id": "/Users/example/source/app" },
+    "outcome": "refused",
+    "reason": "permission rule denied rm -rf"
+  },
+  "trace_id": "9f8e7d6c5b4a39281716151413121110",
+  "labels": { "hook": "tool_call", "tool": "bash" }
+}

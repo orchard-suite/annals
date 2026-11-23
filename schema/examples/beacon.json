@@ -1,0 +1,16 @@
+{
+  "at": "2026-10-31T14:02:11Z",
+  "source": "beacon",
+  "event_key": "audit:00000000-0000-0000-0000-000000000002",
+  "actor": { "kind": "agent", "id": "beacon-agent", "name": "Beacon Agent", "on_behalf_of": "user-0001" },
+  "agent": { "runtime": "ion", "model": "claude-fable-5-1", "session_id": "sess_01J9", "harness": "beacon-agent" },
+  "authority": { "token_id": "mcp-door", "scope": ["app.write"], "granted_by": "user-0001" },
+  "action": {
+    "verb": "app.record.update",
+    "target": { "system": "beacon", "kind": "record", "id": "tasks:42", "title": "Task 42" },
+    "outcome": "ok"
+  },
+  "change": { "summary": "set status to done", "before_hash": "sha256:1a2b", "after_hash": "sha256:3c4d" },
+  "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "labels": { "module": "tasks", "door": "mcp" }
+}
