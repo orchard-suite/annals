@@ -18,6 +18,15 @@ import (
 // and to tell apart from any other secret.
 const TokenPrefix = "an_"
 
+// formerTokenPrefix starts the tokens issued before the product was
+// renamed. They stay valid until an admin revokes them.
+const formerTokenPrefix = "lg_"
+
+// issuedPrefix reports whether secret starts the way an issued token does.
+func issuedPrefix(secret string) bool {
+	return strings.HasPrefix(secret, TokenPrefix) || strings.HasPrefix(secret, formerTokenPrefix)
+}
+
 // lastUsedEvery limits how often a token's last use is written.
 const lastUsedEvery = time.Minute
 
@@ -105,7 +114,7 @@ func (s *Store) liveTokens() int {
 
 // Verify finds the live token a secret belongs to.
 func (s *Store) Verify(ctx context.Context, secret string) (Token, bool) {
-	if !strings.HasPrefix(secret, TokenPrefix) {
+	if !issuedPrefix(secret) {
 		return Token{}, false
 	}
 	h := hash(secret)
