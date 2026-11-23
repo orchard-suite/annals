@@ -52,6 +52,7 @@ func run(log *slog.Logger) error {
 		FaroURL:    os.Getenv("FARO_URL"),
 		FaroKey:    os.Getenv("FARO_API_KEY"),
 		Retention:  policy,
+		AreaWords:  strings.Split(os.Getenv("AREA_WORDS"), ","),
 		Version:    version,
 	}
 	dsn := os.Getenv("CLICKHOUSE_URL")

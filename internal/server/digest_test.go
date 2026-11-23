@@ -56,19 +56,19 @@ func TestAllTimeIsAboutThirtySteps(t *testing.T) {
 }
 
 func TestVerbsAndTargetsReadAsWords(t *testing.T) {
-	if got := plainVerb("household.reveal_secret"); got != "reveal secret" {
+	if got := plainVerb("vault.reveal_secret"); got != "reveal secret" {
 		t.Error(got)
 	}
 	for verb, want := range map[string]string{
-		"household.reveal_secret|secret": "revealed secret",
+		"vault.reveal_secret|secret":     "revealed secret",
 		"rule.changed|blueprint":         "changed rule on",
 		"blueprint.changed|blueprint":    "changed",
 		"icon.changed|model":             "changed icon on",
 		"entity.deleted|container_image": "deleted",
 		"notice.accept|notice":           "accepted",
 		"notice.drop|notice":             "dropped",
-		"household.triage|message":       "triaged",
-		"household.sync_app|argo":        "synced app",
+		"vault.triage|message":           "triaged",
+		"vault.sync_app|argo":            "synced app",
 		"incident.acknowledge|incident":  "acknowledged",
 		"memory.remember|memory":         "remembered",
 		"job.run|cronjob":                "ran",
@@ -79,7 +79,7 @@ func TestVerbsAndTargetsReadAsWords(t *testing.T) {
 			t.Errorf("%s: %q, want %q", v, got, want)
 		}
 	}
-	if got := verbFor(annals.Action{Verb: "household.reveal_secret", Target: annals.Target{Kind: "secret"}}, 3) + " " + targetsSaid(annals.Action{Target: annals.Target{Kind: "secret"}}, 3); got != "revealed 3 secrets" {
+	if got := verbFor(annals.Action{Verb: "vault.reveal_secret", Target: annals.Target{Kind: "secret"}}, 3) + " " + targetsSaid(annals.Action{Target: annals.Target{Kind: "secret"}}, 3); got != "revealed 3 secrets" {
 		t.Error(got)
 	}
 	if got := targetSaid(annals.Action{Verb: "icon.changed", Target: annals.Target{Kind: "model", ID: "icon.changed"}}); got != "model" {
@@ -173,5 +173,17 @@ func TestStreamsFoldOneActionByManyActors(t *testing.T) {
 	}
 	if two := foldActors(runsOf([]annals.Event{ev("a", 9), ev("b", 8)}, true)); len(two) != 2 {
 		t.Errorf("two actors stay apart: %d runs", len(two))
+	}
+}
+
+func TestAnEstatesAreaWordsLeaveTheSentence(t *testing.T) {
+	a := annals.Action{Verb: "lab.thing_changed", Target: annals.Target{Kind: "secret"}}
+	if got := verbWords(a); got != "thing changed lab on" {
+		t.Fatalf("before the area is known: %q", got)
+	}
+	addAreaWords([]string{" lab ", ""})
+	defer delete(genericHeads, "lab")
+	if got := verbWords(a); got != "thing changed" {
+		t.Errorf("with the area known: %q", got)
 	}
 }

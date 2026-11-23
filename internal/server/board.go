@@ -129,7 +129,7 @@ func (s *Server) pageRecords(w http.ResponseWriter, r *http.Request) {
 }
 
 // plainVerb is a verb as words: its last part, with underscores as spaces.
-// "household.reveal_secret" reads "reveal secret".
+// "vault.reveal_secret" reads "reveal secret".
 func plainVerb(v string) string {
 	if i := strings.LastIndexByte(v, '.'); i >= 0 {
 		v = v[i+1:]
@@ -138,8 +138,19 @@ func plainVerb(v string) string {
 }
 
 // genericHeads are verb prefixes that name a product's area, not a thing,
-// so the words of the verb leave them out.
-var genericHeads = map[string]bool{"household": true, "entity": true, "record": true, "item": true}
+// so the words of the verb leave them out. An estate adds its products'
+// own areas with Config.AreaWords.
+var genericHeads = map[string]bool{"entity": true, "record": true, "item": true}
+
+// addAreaWords adds an estate's area prefixes to genericHeads. New calls it
+// once, before the server answers.
+func addAreaWords(words []string) {
+	for _, w := range words {
+		if w = strings.TrimSpace(w); w != "" {
+			genericHeads[w] = true
+		}
+	}
+}
 
 // irregular is the past tense of verbs that do not take -ed.
 var irregular = map[string]string{

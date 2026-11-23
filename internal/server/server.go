@@ -48,6 +48,10 @@ type Config struct {
 	FaroKey string
 	// Retention is shown on the board.
 	Retention retention.Policy
+	// AreaWords are verb prefixes that name an area of a product, such as
+	// "vault" in "vault.reveal_secret": a sentence on the board leaves them
+	// out, as it does "entity", "record", and "item".
+	AreaWords []string
 	Version   string
 }
 
@@ -68,6 +72,7 @@ type Server struct {
 // New builds the server. audit keeps Annals' own records of tokens
 // issued and revoked and of people shown.
 func New(cfg Config, st *store.Store, m *metrics.Metrics, audit *selfaudit.Auditor, log *slog.Logger) (*Server, error) {
+	addAreaWords(cfg.AreaWords)
 	u, err := url.Parse(cfg.PublicURL)
 	if err != nil || u.Scheme == "" || u.Host == "" {
 		return nil, errors.New("PUBLIC_URL must be an absolute URL")
