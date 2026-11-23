@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.2](https://github.com/orchard-suite/annals/compare/v1.0.1...v1.0.2) (2026-11-23)
+
+### Bug Fixes
+
+* **annals:** accept tokens issued before the rename ([7e3c1a3](https://github.com/orchard-suite/annals/commit/7e3c1a34e9e96377cddee48e6d509bc9a449e877))
+
 ## [1.0.1](https://github.com/orchard-suite/annals/compare/v1.0.0...v1.0.1) (2026-11-23)
 
 ### Bug Fixes
