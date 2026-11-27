@@ -237,7 +237,7 @@ func (s *Server) pageEvent(w http.ResponseWriter, r *http.Request) {
 	// The record that caused this one, and the records this one caused.
 	var causedBy []annals.Event
 	if ev.Cause != "" {
-		if c, err := s.store.ByKey(r.Context(), ev.Source, ev.Cause); err == nil {
+		if c, err := s.store.ByKey(r.Context(), ev.CauseFrom(), ev.Cause); err == nil {
 			causedBy = append(causedBy, c)
 		} else if !errors.Is(err, store.ErrNotFound) {
 			s.fail(w, r, "event", err)
@@ -246,7 +246,7 @@ func (s *Server) pageEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	var led []annals.Event
 	if ev.EventKey != "" {
-		p, err := s.store.Query(r.Context(), store.Filter{Source: ev.Source, Cause: ev.EventKey, Limit: store.MaxLimit})
+		p, err := s.store.Query(r.Context(), store.Filter{CauseSource: ev.Source, Cause: ev.EventKey, Limit: store.MaxLimit})
 		if err != nil {
 			s.fail(w, r, "event", err)
 			return
@@ -262,7 +262,7 @@ func (s *Server) pageEvent(w http.ResponseWriter, r *http.Request) {
 	raw, _ := jsonIndent(shown)
 	s.render(w, r, http.StatusOK, "event", map[string]any{
 		"Event": shown, "Corrected": v.events(corrected), "Corrections": v.events(later),
-		"CausedBy": v.events(causedBy), "Led": v.events(led), "Raw": raw, "Near": near,
+		"CausedBy": v.events(causedBy), "CauseFrom": ev.CauseFrom(), "Led": v.events(led), "Raw": raw, "Near": near,
 	})
 }
 

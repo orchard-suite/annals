@@ -20,7 +20,11 @@ over MCP. Read `README.md` and `docs/event.md` first.
 - `internal/store` is ClickHouse (`clickhouse-go`, native protocol):
   records as append-only rows in `records` with the full JSON beside the
   indexed columns, sender tokens as hashes in `tokens`, and the key that
-  makes people refs in `settings`. ClickHouse has no unique keys, so the
+  makes people refs in `settings`. `proof` counts what the watch saw per
+  effect kind, blueprint, path, and sender, filled by the materialized
+  view `proof_feed` from each `change.observed` record, so a proof read
+  never scans records. A schema change only adds: a column by `ALTER ...
+  ADD COLUMN`, never a rewrite. ClickHouse has no unique keys, so the
   store keeps "one record per source and event_key" itself: it is the only
   writer, claims each key in memory while writing it, and looks it up
   first. Tests run on a real ClickHouse that `make check` starts in Docker
@@ -37,7 +41,7 @@ over MCP. Read `README.md` and `docs/event.md` first.
   (Graph's user delta query) when the pod signs in by workload identity.
   `internal/graph` is the Graph client it and the collector share.
 - `internal/server` answers on two ports, one per kind of caller:
-  - `API` (8081): `/v1/events`, `/v1/stats`, `/mcp`, `/healthz`. Trusts
+  - `API` (8081): `/v1/events`, `/v1/stats`, `/v1/proof`, `/mcp`, `/healthz`. Trusts
     only a bearer token Annals issued; `/healthz` is open.
   - `Session` (8080): the board and token administration. Trusts the front
     door's `X-Forwarded-Email` and `X-Forwarded-Groups`; only Traefik may

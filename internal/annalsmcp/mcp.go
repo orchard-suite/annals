@@ -45,7 +45,7 @@ func shownFrom(ctx context.Context) func() {
 	return f
 }
 
-const instructions = `Annals is the record of what every actor (person, agent, or system) did across every product: who acted, for whom, with what authority, on what, with whom, and how it went. Use annals_search to find records (by actor, party, target, or the record that caused them), annals_actor_summary to see what one actor has been doing, and annals_target_history for everything that touched one thing. A record that names a cause was set off by another record from the same source, such as a tool call by the prompt behind it; search with source and cause set to a record's event_key to see what it led to. Records name people and things, never content. A token that reads as reader sees each person as a ref such as p-3f9a1c2b7e4d, and finds people only by ref.`
+const instructions = `Annals is the record of what every actor (person, agent, or system) did across every product: who acted, for whom, with what authority, on what, with whom, and how it went. Use annals_search to find records (by actor, party, target, or the record that caused them), annals_actor_summary to see what one actor has been doing, and annals_target_history for everything that touched one thing. A record that names a cause was set off by another record, such as a tool call by the prompt behind it: from the same source, or from the one cause_source names. Search with cause set to a record's event_key and cause_source to its source to see what it led to, from every sender. Records name people and things, never content. A token that reads as reader sees each person as a ref such as p-3f9a1c2b7e4d, and finds people only by ref.`
 
 // Handler is the streamable HTTP endpoint. The caller mounts it at /mcp and
 // checks the bearer token first.
@@ -103,18 +103,19 @@ func (t *tools) events(evs []annals.Event) []annals.Event {
 }
 
 type SearchIn struct {
-	Since    string `json:"since,omitempty" jsonschema:"RFC 3339 time or a span back from now such as 24h or 7d"`
-	Until    string `json:"until,omitempty" jsonschema:"RFC 3339 time or a span back from now"`
-	Actor    string `json:"actor,omitempty" jsonschema:"actor.id, or a person's ref"`
-	Party    string `json:"party,omitempty" jsonschema:"a party's id, email, or ref: who a thing was shared with or who was added"`
-	Cause    string `json:"cause,omitempty" jsonschema:"an event_key; finds the records it caused, such as the tool calls behind a prompt. Pair with source."`
-	Source   string `json:"source,omitempty" jsonschema:"the product that sent the event"`
-	System   string `json:"system,omitempty" jsonschema:"action.target.system"`
-	Outcome  string `json:"outcome,omitempty" jsonschema:"ok, refused, or failed"`
-	Verb     string `json:"verb,omitempty" jsonschema:"action.verb such as file.write"`
-	Approval bool   `json:"approval_required,omitempty" jsonschema:"only events whose authority required approval"`
-	Limit    int    `json:"limit,omitempty" jsonschema:"events per page, 50 by default, 500 at most"`
-	Cursor   string `json:"cursor,omitempty" jsonschema:"the next cursor from an earlier page"`
+	Since       string `json:"since,omitempty" jsonschema:"RFC 3339 time or a span back from now such as 24h or 7d"`
+	Until       string `json:"until,omitempty" jsonschema:"RFC 3339 time or a span back from now"`
+	Actor       string `json:"actor,omitempty" jsonschema:"actor.id, or a person's ref"`
+	Party       string `json:"party,omitempty" jsonschema:"a party's id, email, or ref: who a thing was shared with or who was added"`
+	Cause       string `json:"cause,omitempty" jsonschema:"an event_key; finds the records it caused, such as the tool calls behind a prompt. Pair with cause_source."`
+	CauseSource string `json:"cause_source,omitempty" jsonschema:"the source of the record cause names; finds what it caused from every sender"`
+	Source      string `json:"source,omitempty" jsonschema:"the product that sent the event"`
+	System      string `json:"system,omitempty" jsonschema:"action.target.system"`
+	Outcome     string `json:"outcome,omitempty" jsonschema:"ok, refused, or failed"`
+	Verb        string `json:"verb,omitempty" jsonschema:"action.verb such as file.write"`
+	Approval    bool   `json:"approval_required,omitempty" jsonschema:"only events whose authority required approval"`
+	Limit       int    `json:"limit,omitempty" jsonschema:"events per page, 50 by default, 500 at most"`
+	Cursor      string `json:"cursor,omitempty" jsonschema:"the next cursor from an earlier page"`
 }
 
 type SearchOut struct {
@@ -142,7 +143,7 @@ func (t *tools) search(ctx context.Context, _ *mcp.CallToolRequest, in SearchIn)
 }
 
 func filterFrom(in SearchIn) (store.Filter, error) {
-	f := store.Filter{Actor: in.Actor, Party: in.Party, Cause: in.Cause, Source: in.Source, System: in.System, Outcome: in.Outcome, Verb: in.Verb, ApprovalRequired: in.Approval, Limit: in.Limit, Cursor: in.Cursor}
+	f := store.Filter{Actor: in.Actor, Party: in.Party, Cause: in.Cause, CauseSource: in.CauseSource, Source: in.Source, System: in.System, Outcome: in.Outcome, Verb: in.Verb, ApprovalRequired: in.Approval, Limit: in.Limit, Cursor: in.Cursor}
 	var err error
 	if f.Since, err = parseTime(in.Since); err != nil {
 		return f, fmt.Errorf("since: %w", err)
@@ -208,7 +209,7 @@ func line(ev annals.Event) string {
 		s += "  key " + ev.EventKey
 	}
 	if ev.Cause != "" {
-		s += "  caused by " + ev.Cause
+		s += "  caused by " + ev.CauseFrom() + "/" + ev.Cause
 	}
 	return s + "  [" + ev.Source + "]\n"
 }

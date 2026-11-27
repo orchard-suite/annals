@@ -1,0 +1,22 @@
+{
+  "at": "2026-11-26T15:00:00Z",
+  "source": "orrery",
+  "event_key": "run:01JC0A:stated",
+  "actor": { "kind": "agent", "id": "acme-agent", "on_behalf_of": "user-0001" },
+  "action": {
+    "verb": "change.stated",
+    "target": { "system": "orrery", "kind": "change", "id": "run:01JC0A:stated" },
+    "outcome": "ok"
+  },
+  "items": [
+    { "system": "catalog", "kind": "workload", "id": "acme-web" },
+    { "system": "catalog", "kind": "identity", "id": "acme-web-id" }
+  ],
+  "effects": [
+    { "kind": "stops", "subject": { "blueprint": "workload", "key": "acme-web" }, "path": "in-place", "undo": "yes", "claim": "estate" },
+    { "kind": "grants", "subject": { "blueprint": "identity", "key": "acme-web-id" }, "path": "in-place", "undo": "yes", "claim": "writer" },
+    { "kind": "costs", "subject": { "blueprint": "plan", "key": "acme-plan" }, "path": "in-place", "size": 40, "undo": "partial", "claim": "model" }
+  ],
+  "change": { "after_hash": "sha256:9f2c4e7a1b3d5f60718293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7" },
+  "labels": { "applier": "hub", "writer": "infra" }
+}

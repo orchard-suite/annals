@@ -97,7 +97,7 @@ func (s *Store) Close() error { return s.conn.Close() }
 func (s *Store) Masker() people.Masker { return s.masker }
 
 func (s *Store) migrate(ctx context.Context) error {
-	for _, stmt := range append(schema, directorySchema...) {
+	for _, stmt := range slices.Concat(schema, directorySchema, changeSchema) {
 		if err := s.conn.Exec(ctx, stmt); err != nil {
 			return fmt.Errorf("migrate: %w", err)
 		}
@@ -184,6 +184,53 @@ var schema = []string{
 		version UInt64
 	) ENGINE = ReplacingMergeTree(version)
 	ORDER BY name`,
+}
+
+// changeSchema is what change events need: the source of a record's
+// cause, the effects as columns, and proof. Each ALTER adds a column and
+// rewrites no part: a part written before it reads the column's default.
+// The default of cause_source is the record's own source, which is what a
+// cause meant before a cause could name another sender.
+//
+// proof counts what the watch saw, by effect kind, the subject's
+// blueprint, the path, and the sender. proof_feed fills it from each
+// change.observed record as it is written, so a read of one key reads one
+// row and never the records. A change counts once per key, by the worst
+// of its sightings: harm, then blind, then clean. Retention prunes records,
+// never proof.
+var changeSchema = []string{
+	`ALTER TABLE records ADD COLUMN IF NOT EXISTS cause_source LowCardinality(String) DEFAULT if(cause = '', '', source)`,
+	`ALTER TABLE records ADD COLUMN IF NOT EXISTS effect_kinds Array(LowCardinality(String))`,
+	`ALTER TABLE records ADD COLUMN IF NOT EXISTS effect_blueprints Array(LowCardinality(String))`,
+	`ALTER TABLE records ADD COLUMN IF NOT EXISTS effect_paths Array(LowCardinality(String))`,
+	`ALTER TABLE records ADD COLUMN IF NOT EXISTS effect_verdicts Array(LowCardinality(String))`,
+	`CREATE TABLE IF NOT EXISTS proof (
+		kind LowCardinality(String),
+		blueprint LowCardinality(String),
+		path LowCardinality(String),
+		source LowCardinality(String),
+		watched SimpleAggregateFunction(sum, UInt64),
+		clean SimpleAggregateFunction(sum, UInt64),
+		harm SimpleAggregateFunction(sum, UInt64),
+		blind SimpleAggregateFunction(sum, UInt64),
+		last_seen SimpleAggregateFunction(max, DateTime64(3, 'UTC'))
+	) ENGINE = AggregatingMergeTree
+	ORDER BY (kind, blueprint, path, source)`,
+	`CREATE MATERIALIZED VIEW IF NOT EXISTS proof_feed TO proof AS
+	SELECT kind, blueprint, path, source,
+		toUInt64(1) AS watched,
+		toUInt64(worst = 0) AS clean,
+		toUInt64(worst = 2) AS harm,
+		toUInt64(worst = 1) AS blind,
+		last_seen
+	FROM (
+		SELECT id, source, kind, blueprint, path, max(at) AS last_seen,
+			max(multiIf(verdict = 'harm', 2, verdict = 'blind', 1, 0)) AS worst
+		FROM records
+		ARRAY JOIN effect_kinds AS kind, effect_blueprints AS blueprint, effect_paths AS path, effect_verdicts AS verdict
+		WHERE verb = 'change.observed' AND verdict != ''
+		GROUP BY id, source, kind, blueprint, path
+	)`,
 }
 
 // setting reads a setting, writing make's value first when it is missing.
@@ -338,7 +385,15 @@ func (s *Store) insert(ctx context.Context, evs []annals.Event) error {
 	if len(evs) == 0 {
 		return nil
 	}
-	batch, err := s.conn.PrepareBatch(ctx, `INSERT INTO records`)
+	batch, err := s.conn.PrepareBatch(ctx, `INSERT INTO records (
+		id, at, received_at, source, event_key,
+		actor_kind, actor_id, actor_ref, runtime,
+		verb, target_system, target_kind, target_id, target_ref,
+		outcome, approval_required, approval_by, approval_ref,
+		trace_id, corrects, cause, cause_source,
+		party_ids, party_refs, party_emails,
+		effect_kinds, effect_blueprints, effect_paths, effect_verdicts,
+		body)`)
 	if err != nil {
 		return err
 	}
@@ -369,13 +424,23 @@ func (s *Store) insert(ctx context.Context, evs []annals.Event) error {
 				partyEmails = append(partyEmails, strings.ToLower(p.Email))
 			}
 		}
+		var causeSource string
+		if ev.Cause != "" {
+			causeSource = ev.CauseFrom()
+		}
+		n := len(ev.Effects)
+		kinds, blueprints, paths, verdicts := make([]string, n), make([]string, n), make([]string, n), make([]string, n)
+		for i, ef := range ev.Effects {
+			kinds[i], blueprints[i], paths[i], verdicts[i] = ef.Kind, ef.Subject.Blueprint, ef.Path, ef.Verdict
+		}
 		err = batch.Append(
 			ev.ID, ev.At, ev.ReceivedAt, ev.Source, ev.EventKey,
 			ev.Actor.Kind, ev.Actor.ID, s.masker.ActorRef(ev.Actor), runtime,
 			ev.Action.Verb, ev.Action.Target.System, ev.Action.Target.Kind, ev.Action.Target.ID, s.masker.TargetRef(ev.Action.Target),
 			ev.Action.Outcome, approvalRequired, approvalBy, s.masker.Filed(approvalBy),
-			ev.TraceID, ev.Corrects, ev.Cause,
+			ev.TraceID, ev.Corrects, ev.Cause, causeSource,
 			partyIDs, partyRefs, partyEmails,
+			kinds, blueprints, paths, verdicts,
 			string(body),
 		)
 		if err != nil {
@@ -418,16 +483,19 @@ func isNoRows(err error) bool {
 
 // Filter is every way the API, the board, and the MCP tools narrow records.
 type Filter struct {
-	Since, Until     time.Time
-	Actor            string
-	Source           string
-	System           string
-	Outcome          string
-	Verb             string
-	TargetKind       string
-	TargetID         string
-	Party            string
-	Cause            string
+	Since, Until time.Time
+	Actor        string
+	Source       string
+	System       string
+	Outcome      string
+	Verb         string
+	TargetKind   string
+	TargetID     string
+	Party        string
+	Cause        string
+	// CauseSource narrows to records whose cause is from this source,
+	// their own when they name none.
+	CauseSource      string
 	ApprovalRequired bool
 	Limit            int
 	Cursor           string
@@ -511,6 +579,9 @@ func (f Filter) where() (string, []any) {
 	}
 	if f.Cause != "" {
 		add("cause = ?", f.Cause)
+	}
+	if f.CauseSource != "" {
+		add("cause_source = ?", f.CauseSource)
 	}
 	if f.ApprovalRequired {
 		w = append(w, "approval_required")
@@ -747,6 +818,46 @@ func (s *Store) Stats(ctx context.Context) (Stats, error) {
 	}
 	st.DBBytes = int64(bytes)
 	return st, nil
+}
+
+// ProofKey names what proof is counted by: an effect kind, the class of
+// the subject that felt it, and the path the change took.
+type ProofKey struct {
+	Kind      string `json:"kind"`
+	Blueprint string `json:"blueprint"`
+	Path      string `json:"path"`
+	// Source, when set, counts only what that sender saw.
+	Source string `json:"source,omitempty"`
+}
+
+// Proof is how many changes of one key were watched, and what was seen.
+type Proof struct {
+	ProofKey
+	Watched  int       `json:"watched"`
+	Clean    int       `json:"clean"`
+	Harm     int       `json:"harm"`
+	Blind    int       `json:"blind"`
+	LastSeen time.Time `json:"last_seen,omitzero"`
+}
+
+// Proof reads the counts for one key from proof, never the records.
+func (s *Store) Proof(ctx context.Context, k ProofKey) (Proof, error) {
+	query := `SELECT sum(watched), sum(clean), sum(harm), sum(blind), max(last_seen) FROM proof WHERE kind = ? AND blueprint = ? AND path = ?`
+	args := []any{k.Kind, k.Blueprint, k.Path}
+	if k.Source != "" {
+		query += ` AND source = ?`
+		args = append(args, k.Source)
+	}
+	var watched, clean, harm, blind uint64
+	var last time.Time
+	if err := s.conn.QueryRow(ctx, query, args...).Scan(&watched, &clean, &harm, &blind, &last); err != nil {
+		return Proof{}, err
+	}
+	p := Proof{ProofKey: k, Watched: int(watched), Clean: int(clean), Harm: int(harm), Blind: int(blind)}
+	if watched > 0 {
+		p.LastSeen = last.UTC()
+	}
+	return p, nil
 }
 
 // Prune deletes records from source older than before and returns how many

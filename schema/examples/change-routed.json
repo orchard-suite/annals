@@ -1,0 +1,15 @@
+{
+  "at": "2026-11-26T15:00:02Z",
+  "source": "orrery",
+  "event_key": "run:01JC0A:routed",
+  "actor": { "kind": "system", "id": "orrery" },
+  "action": {
+    "verb": "change.routed",
+    "target": { "system": "orrery", "kind": "change", "id": "run:01JC0A:stated" },
+    "outcome": "ok"
+  },
+  "cause": "run:01JC0A:stated",
+  "cause_source": "orrery",
+  "change": { "after_hash": "sha256:9f2c4e7a1b3d5f60718293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7" },
+  "labels": { "route": "people", "quorum": "1", "judge": "trellis", "pack": "acme-gate", "draft.acme-gate-next": "no_one" }
+}

@@ -234,6 +234,7 @@ func parseFilter(q url.Values) (store.Filter, error) {
 	f.TargetID = q.Get("target")
 	f.Party = q.Get("party")
 	f.Cause = q.Get("cause")
+	f.CauseSource = q.Get("cause_source")
 	f.ApprovalRequired = q.Get("approval") == "required"
 	f.Cursor = q.Get("cursor")
 	if v := q.Get("limit"); v != "" {

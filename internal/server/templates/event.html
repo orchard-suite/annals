@@ -111,7 +111,7 @@
   </ul>
 </section>
 {{end}}
-{{if .CausedBy}}<section><div class="sect"><h2>Set off by</h2></div>{{template "records" (days .CausedBy)}}</section>{{else if $e.Cause}}<section><div class="sect"><h2>Set off by</h2></div><p class="callout plain">The record <code>{{$e.Cause}}</code> from {{$e.Source}} has not arrived.</p></section>{{end}}
+{{if .CausedBy}}<section><div class="sect"><h2>Set off by</h2></div>{{template "records" (days .CausedBy)}}</section>{{else if $e.Cause}}<section><div class="sect"><h2>Set off by</h2></div><p class="callout plain">The record <code>{{$e.Cause}}</code> from {{.CauseFrom}} has not arrived.</p></section>{{end}}
 {{if .Led}}<section><div class="sect"><h2>Led to <span class="count">{{len .Led}}</span></h2></div>{{template "records" (days .Led)}}</section>{{end}}
 {{if .Corrected}}<section><div class="sect"><h2>Corrects</h2></div>{{template "records" (days .Corrected)}}</section>{{end}}
 {{if .Corrections}}<section><div class="sect"><h2>Corrected by</h2></div>{{template "records" (days .Corrections)}}</section>{{end}}

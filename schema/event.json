@@ -41,6 +41,19 @@
       "minLength": 1,
       "maxLength": 256,
       "pattern": "[^\\s@<>\"']+@[^\\s@<>\"']+\\.[A-Za-z]{2,}"
+    },
+    "name": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/short"
+        },
+        {
+          "not": {
+            "pattern": "[^\\s@<>\"']+@[^\\s@<>\"']+\\.[A-Za-z]{2,}"
+          }
+        }
+      ],
+      "description": "A short name or key that is never an email address."
     }
   },
   "properties": {
@@ -237,7 +250,11 @@
     },
     "cause": {
       "$ref": "#/$defs/short",
-      "description": "The event_key of the record from the same source that caused this one, such as the prompt behind a tool call."
+      "description": "The event_key of the record that caused this one, such as the prompt behind a tool call. It is from the same source unless cause_source names another."
+    },
+    "cause_source": {
+      "$ref": "#/$defs/slug",
+      "description": "The source of the record cause names, when it is another sender's. Only with cause."
     },
     "parties": {
       "type": "array",
@@ -329,6 +346,76 @@
         }
       }
     },
+    "effects": {
+      "type": "array",
+      "maxItems": 1000,
+      "description": "What a change did, or was predicted to do, to each live thing, by kind. Names and kinds, never a value.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "subject",
+          "path"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/$defs/slug",
+            "description": "An effect kind, such as stops or grants."
+          },
+          "subject": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "blueprint",
+              "key"
+            ],
+            "description": "The catalog entity that feels it.",
+            "properties": {
+              "blueprint": {
+                "$ref": "#/$defs/slug",
+                "description": "The entity's class."
+              },
+              "key": {
+                "$ref": "#/$defs/name"
+              }
+            }
+          },
+          "path": {
+            "$ref": "#/$defs/slug",
+            "description": "How the change reached the thing, such as in-place or swap."
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "How much, in the kind's own unit."
+          },
+          "undo": {
+            "enum": [
+              "yes",
+              "no",
+              "partial"
+            ]
+          },
+          "claim": {
+            "enum": [
+              "writer",
+              "estate",
+              "model"
+            ],
+            "description": "Where a predicted effect came from."
+          },
+          "verdict": {
+            "enum": [
+              "clean",
+              "harm",
+              "blind"
+            ],
+            "description": "What the watch saw: nothing happened, the thing was hurt, or it could not look."
+          }
+        }
+      }
+    },
     "labels": {
       "type": "object",
       "maxProperties": 16,
@@ -345,5 +432,10 @@
         }
       }
     }
+  },
+  "dependentRequired": {
+    "cause_source": [
+      "cause"
+    ]
   }
 }

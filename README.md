@@ -20,7 +20,8 @@ prompt, the message, or the file.
 One shape, `annals.Event`: who acted (`actor`), as what agent (`agent`),
 with what authority and approval (`authority`), did what to what and how it
 went (`action`), with whom (`parties`), touching what else (`items`), set
-off by which earlier record (`cause`), what changed by hash (`change`), in
+off by which earlier record, from any sender (`cause`, `cause_source`),
+what a change did to each live thing by kind (`effects`), what changed by hash (`change`), in
 which trace (`trace_id`), sent by which product (`source`). Names and ids,
 never content or a secret; people only in person fields; records are
 append-only and a correction is a new record. The contract is
@@ -77,8 +78,9 @@ and an actor page lists every id of the person.
 
 API: `POST /v1/events` (one or a batch, idempotent by `source` plus
 `event_key`), `GET /v1/events` with `since`, `until`, `actor`, `source`,
-`system`, `outcome`, `verb`, `party`, `cause`, paged by cursor, `GET /v1/events/{id}`,
-`GET /v1/stats`, `GET /v1/whoami`, and `/mcp` (streamable HTTP) with
+`system`, `outcome`, `verb`, `party`, `cause`, `cause_source`, paged by cursor, `GET /v1/events/{id}`,
+`GET /v1/stats`, `GET /v1/proof` (what the watch saw for one effect kind,
+blueprint, and path), `GET /v1/whoami`, and `/mcp` (streamable HTTP) with
 `annals_search`, `annals_actor_summary`, `annals_target_history`.
 
 Board: Today, a window (24 hours, 7 days, 30 days, or all time) read as

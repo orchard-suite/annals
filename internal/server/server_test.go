@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/orchard-suite/platformkit/v3/annals"
 
@@ -504,5 +505,51 @@ func TestAPersonWithNoNameIsListedByEmail(t *testing.T) {
 	_, body = r.page("/records?since=", reader)
 	if strings.Contains(body, "writer@example.com") || strings.Contains(body, ">user-0002<") || !strings.Contains(body, ">"+r.store.Masker().Ref("user-0002")+"</a>") {
 		t.Error("a reader sees the ref")
+	}
+}
+
+// A change's events join it from every sender, on the board and the API.
+func TestChangeEventsJoinAcrossSenders(t *testing.T) {
+	r := newRig(t)
+	ids := r.ingest("change-stated", "change-routed", "change-decided", "change-ended", "change-observed")
+	_, body := r.page("/events/"+ids[0], pii)
+	if !strings.Contains(body, "Led to <span class=\"count\">4</span>") || !strings.Contains(body, "change.observed") {
+		t.Errorf("the change.stated record does not show the four events that followed it")
+	}
+	_, body = r.page("/events/"+ids[4], pii)
+	if !strings.Contains(body, "Set off by") || !strings.Contains(body, "change.stated") {
+		t.Errorf("the watch's record does not show the change it watched")
+	}
+	tok := r.token("reader")
+	resp, body2 := r.do("GET", "/v1/events?cause=run:01JC0A:stated&cause_source=orrery&source=dispatch", tok, nil)
+	var p store.Page
+	json.Unmarshal(body2, &p)
+	if resp.StatusCode != http.StatusOK || len(p.Events) != 1 || p.Events[0].Action.Verb != "change.observed" {
+		t.Errorf("cause_source: %d %s", resp.StatusCode, body2)
+	}
+}
+
+// GET /v1/proof answers for one key from what the watch saw, to a token.
+func TestAPIProof(t *testing.T) {
+	r := newRig(t)
+	r.ingest("change-stated", "change-observed")
+	tok := r.token("reader")
+	resp, body := r.do("GET", "/v1/proof?kind=stops&blueprint=workload&path=in-place", tok, nil)
+	var got store.Proof
+	json.Unmarshal(body, &got)
+	want := store.Proof{ProofKey: store.ProofKey{Kind: "stops", Blueprint: "workload", Path: "in-place"}, Watched: 1, Blind: 1,
+		LastSeen: time.Date(2026, 11, 26, 15, 44, 5, 0, time.UTC)}
+	if resp.StatusCode != http.StatusOK || got != want {
+		t.Errorf("proof: %d %s", resp.StatusCode, body)
+	}
+	resp, body = r.do("GET", "/v1/proof?kind=grants&blueprint=identity&path=in-place", tok, nil)
+	if resp.StatusCode != http.StatusOK || strings.Contains(string(body), "last_seen") || !strings.Contains(string(body), `"watched":0`) {
+		t.Errorf("a stated effect is no proof: %d %s", resp.StatusCode, body)
+	}
+	if resp, _ := r.do("GET", "/v1/proof?kind=stops&blueprint=workload", tok, nil); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("a key with no path: %d", resp.StatusCode)
+	}
+	if resp, _ := r.do("GET", "/v1/proof?kind=stops&blueprint=workload&path=in-place", "", nil); resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("proof with no token: %d", resp.StatusCode)
 	}
 }

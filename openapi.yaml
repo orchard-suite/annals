@@ -111,7 +111,12 @@ paths:
             type: string
         - name: cause
           in: query
-          description: An event_key; only the records it caused. Pair with source.
+          description: An event_key; only the records it caused. Pair with cause_source.
+          schema:
+            type: string
+        - name: cause_source
+          in: query
+          description: The source of the record cause names; with cause, what it caused from every sender. A record whose cause names no source has its own.
           schema:
             type: string
         - name: source
@@ -215,6 +220,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Stats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/StoreError"
+  /v1/proof:
+    get:
+      operationId: getProof
+      summary: Count what the watch saw for one key
+      description: >-
+        How many changes the watch saw for one effect kind, subject
+        blueprint, and path, and what it saw, from change.observed records.
+        A change counts once per key, by the worst of its sightings: harm,
+        then blind, then clean. Read from a table kept as records arrive,
+        never from the records.
+      tags: [events]
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          description: The effect kind, such as stops.
+          schema:
+            type: string
+        - name: blueprint
+          in: query
+          required: true
+          description: The blueprint of the subject that felt it.
+          schema:
+            type: string
+        - name: path
+          in: query
+          required: true
+          description: The path the change took, such as in-place.
+          schema:
+            type: string
+        - name: source
+          in: query
+          description: Count only what this sender saw.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: The counts. A key never watched counts zero, with no last_seen.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Proof"
+        "400":
+          description: A part of the key is missing or not a lowercase slug.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
@@ -367,6 +424,35 @@ components:
         db_bytes:
           type: integer
           format: int64
+    Proof:
+      type: object
+      required: [kind, blueprint, path, watched, clean, harm, blind]
+      properties:
+        kind:
+          type: string
+        blueprint:
+          type: string
+        path:
+          type: string
+        source:
+          type: string
+          description: The sender counted, when the read named one.
+        watched:
+          type: integer
+          description: Changes watched, each once.
+        clean:
+          type: integer
+          description: Changes where the watch looked and nothing happened.
+        harm:
+          type: integer
+          description: Changes where a subject was hurt.
+        blind:
+          type: integer
+          description: Changes where the watch could not look at some subject. Never the same as clean.
+        last_seen:
+          type: string
+          format: date-time
+          description: When the newest of them was observed.
     Token:
       type: object
       required: [id, name, source, reads, created]

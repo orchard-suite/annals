@@ -105,6 +105,20 @@ func TestRefusals(t *testing.T) {
 		{"item with no id", func(m map[string]any) {
 			m["items"] = []any{map[string]any{"system": "sharepoint", "kind": "file"}}
 		}, "missing_items_id"},
+		{"cause_source with no cause", func(m map[string]any) { m["cause_source"] = "orrery" }, "bad_cause_source"},
+		{"cause_source not a slug", func(m map[string]any) { m["cause"], m["cause_source"] = "k0", "Orrery" }, "bad_slug"},
+		{"effect with no path", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { delete(e, "path") })} }, "missing_effects_path"},
+		{"effect kind not a slug", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["kind"] = "Stops" })} }, "bad_slug"},
+		{"effect with no subject key", func(m map[string]any) {
+			m["effects"] = []any{effect(func(e map[string]any) { delete(e["subject"].(map[string]any), "key") })}
+		}, "missing_effects_subject_key"},
+		{"effect key an email", func(m map[string]any) {
+			m["effects"] = []any{effect(func(e map[string]any) { e["subject"].(map[string]any)["key"] = "owner@example.com" })}
+		}, "email_in_text"},
+		{"effect size below zero", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["size"] = -1 })} }, "bad_size"},
+		{"effect undo unknown", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["undo"] = "maybe" })} }, "bad_undo"},
+		{"effect claim unknown", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["claim"] = "guess" })} }, "bad_claim"},
+		{"effect verdict unknown", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["verdict"] = "fine" })} }, "bad_verdict"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -127,4 +141,48 @@ func TestRefusals(t *testing.T) {
 			}
 		})
 	}
+}
+
+// effect is a good effect, changed by mutate.
+func effect(mutate func(map[string]any)) map[string]any {
+	e := map[string]any{"kind": "stops", "subject": map[string]any{"blueprint": "workload", "key": "acme-web"}, "path": "in-place"}
+	mutate(e)
+	return e
+}
+
+// Each change event's example follows the mapping in docs/event.md: the
+// event's name is the verb, the target is the change, and every event but
+// change.stated names the change.stated event as its cause.
+func TestChangeEventExamples(t *testing.T) {
+	stated := annalsEvent(t, "change-stated.json")
+	for _, name := range []string{"stated", "routed", "decided", "ended", "observed"} {
+		ev := annalsEvent(t, "change-"+name+".json")
+		if ev.Action.Verb != "change."+name {
+			t.Errorf("%s: verb %q", name, ev.Action.Verb)
+		}
+		if want := (annals.Target{System: "orrery", Kind: "change", ID: stated.EventKey}); ev.Action.Target != want {
+			t.Errorf("%s: target %+v, want %+v", name, ev.Action.Target, want)
+		}
+		if ev.Change == nil || ev.Change.AfterHash != stated.Change.AfterHash {
+			t.Errorf("%s: change.after_hash is the statement's digest", name)
+		}
+		if name == "stated" {
+			continue
+		}
+		if ev.Cause != stated.EventKey || ev.CauseFrom() != stated.Source {
+			t.Errorf("%s: cause %s/%s, want %s/%s", name, ev.CauseFrom(), ev.Cause, stated.Source, stated.EventKey)
+		}
+		if len(ev.Items) > 0 {
+			t.Errorf("%s: only change.stated carries the statement's things", name)
+		}
+	}
+}
+
+func annalsEvent(t *testing.T, name string) annals.Event {
+	t.Helper()
+	var ev annals.Event
+	if err := json.Unmarshal(examples(t)[name], &ev); err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+	return ev
 }

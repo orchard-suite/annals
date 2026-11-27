@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/orchard-suite/platformkit/v3/annals"
@@ -33,6 +34,7 @@ func (s *Server) API() http.Handler {
 	mux.Handle("GET /v1/events", s.sender(s.apiList))
 	mux.Handle("GET /v1/events/{id}", s.sender(s.apiGet))
 	mux.Handle("GET /v1/stats", s.sender(s.apiStats))
+	mux.Handle("GET /v1/proof", s.sender(s.apiProof))
 	mux.Handle("GET /v1/whoami", s.sender(s.apiWhoami))
 	mcp := annalsmcp.Handler(s.store, s.cfg.Version)
 	mux.Handle("/mcp", s.sender(func(w http.ResponseWriter, r *http.Request, tok store.Token) {
@@ -196,4 +198,31 @@ func (s *Server) apiStats(w http.ResponseWriter, r *http.Request, _ store.Token)
 		return
 	}
 	writeJSON(w, http.StatusOK, st)
+}
+
+// proofParam is a slug: an effect kind, a blueprint, a path, or a source.
+var proofParam = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,255}$`)
+
+// apiProof answers how many changes of one key the watch saw, and what it
+// saw, from the proof table alone.
+func (s *Server) apiProof(w http.ResponseWriter, r *http.Request, _ store.Token) {
+	q := r.URL.Query()
+	k := store.ProofKey{Kind: q.Get("kind"), Blueprint: q.Get("blueprint"), Path: q.Get("path"), Source: q.Get("source")}
+	for _, p := range []struct{ name, v string }{{"kind", k.Kind}, {"blueprint", k.Blueprint}, {"path", k.Path}} {
+		if !proofParam.MatchString(p.v) {
+			writeError(w, http.StatusBadRequest, p.name+" is required, a lowercase slug", "bad_filter")
+			return
+		}
+	}
+	if k.Source != "" && !proofParam.MatchString(k.Source) {
+		writeError(w, http.StatusBadRequest, "source must be a lowercase slug", "bad_filter")
+		return
+	}
+	p, err := s.store.Proof(r.Context(), k)
+	if err != nil {
+		s.logRequest(r.Context(), slog.LevelError, "proof failed", r, "error", err)
+		writeError(w, http.StatusInternalServerError, "the proof could not be read", "store_error")
+		return
+	}
+	writeJSON(w, http.StatusOK, p)
 }

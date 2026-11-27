@@ -1,0 +1,15 @@
+{
+  "at": "2026-11-26T15:09:40Z",
+  "source": "orrery",
+  "event_key": "run:01JC0A:decided:1",
+  "actor": { "kind": "person", "id": "user-0001" },
+  "action": {
+    "verb": "change.decided",
+    "target": { "system": "orrery", "kind": "change", "id": "run:01JC0A:stated" },
+    "outcome": "ok"
+  },
+  "cause": "run:01JC0A:stated",
+  "cause_source": "orrery",
+  "change": { "after_hash": "sha256:9f2c4e7a1b3d5f60718293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7" },
+  "labels": { "answer": "yes" }
+}

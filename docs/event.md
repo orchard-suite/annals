@@ -52,8 +52,10 @@ value.
 | `items` | sender | Optional, at most 100. Things the action touched besides its target, such as the files an agent read to answer a prompt: `system`, `kind`, `id`, and an optional `title`, `access` (a slug such as `read` or `write`), sensitivity `label`, and `hash`. |
 | `change` | sender | Optional. Hashes of the thing before and after, and a short summary. Never the content. |
 | `trace_id` | sender | The W3C trace id the action ran in, so a record joins a trace in Tempo. |
-| `cause` | sender | The `event_key` of the record from the same source that set this one off, such as the prompt behind a tool call. The board shows each record's cause and what it led to. |
+| `cause` | sender | The `event_key` of the record that set this one off, such as the prompt behind a tool call. The board shows each record's cause and what it led to. |
+| `cause_source` | sender | Optional, only with `cause`. The `source` of the record `cause` names, when another sender posted it. Empty means this event's own source. |
 | `corrects` | sender | The `id` of an earlier record this one corrects. |
+| `effects` | sender | Optional, at most 1000. What a change did, or was predicted to do, to each live thing, by kind. See [Effects](#effects). |
 | `labels` | sender | At most 16 low-cardinality string pairs, keys lowercase slugs, values under 64 characters. Never an id, a person, or a timestamp. |
 
 Short strings (`id`, `name`, `email`, keys, hashes) are at most 256
@@ -106,6 +108,62 @@ refused with `email_in_text`.
    id, job step, or tool call id. Without a key every post is a new record.
 7. **A cause is a key, not an id.** Set `cause` to the `event_key` the cause
    was posted with, so a sender can post both in one batch, or out of order.
+   A cause from another sender names that sender in `cause_source`. An
+   event never causes itself: the same source and key is refused with
+   `bad_cause`.
+
+## Effects
+
+An effect is what a change does to one live thing, never the tool's verb
+and never a value. A record of a stated change carries its predicted
+effects; a record of what a watch saw carries each sighting with a
+verdict.
+
+| Field | Meaning |
+|---|---|
+| `kind` | Required. The effect kind, a slug such as `stops`, `cuts`, `opens`, `grants`, `loses`, or `costs`, or a kind the estate names. |
+| `subject` | Required. The catalog entity that feels it: its `blueprint` (its class, a slug) and its `key` (short, never an email). |
+| `path` | Required. How the change reached the thing, a slug such as `in-place`, `swap`, or `rolling`. |
+| `size` | Optional. How much, in the kind's own unit, a whole number never below zero. |
+| `undo` | Optional. Whether the old artifact puts it back: `yes`, `no`, or `partial`. |
+| `claim` | Optional. Where a predicted effect came from: `writer`, `estate`, or `model`. |
+| `verdict` | Optional. What the watch saw: `clean` (it looked, and nothing happened), `harm` (the thing was hurt), or `blind` (it could not look; never the same as clean). |
+
+## Change events
+
+A change to a live thing is told as five change events, each with a
+`sender`, its own `key`, a time `at`, the statement's `digest`, and, after
+the first, `of`: the `change.stated` event it belongs to, by sender and
+key. Their contract is the `change` package of the platform kit. A sender
+posts each to Annals as one event, mapped like this:
+
+| Event field | From the change event |
+|---|---|
+| `source` | `sender` |
+| `event_key` | `key` |
+| `at` | `at` |
+| `actor` | `change.stated`: the statement's actor (`kind`, `id`, `on_behalf_of`). `change.decided`: `by`. `change.routed` and `change.ended`: `{kind: system, id: <sender>}`. `change.observed`: `{kind: system, id: <the watch's name>}`. |
+| `action.verb` | The event's name: `change.stated`, `change.routed`, `change.decided`, `change.ended`, or `change.observed`. |
+| `action.target` | `{system: orrery, kind: change, id: <the key of the change.stated event>}`, the same on all five. |
+| `action.outcome` | `ok`, except `change.ended`, which takes its own outcome (`ok`, `failed`, or `refused`) with a `reason` when it is not `ok`, such as which statement fields differed. |
+| `cause`, `cause_source` | `of.key` and `of.sender`, on every event but `change.stated`. |
+| `items` | `change.stated` only: each of the statement's things as `{system: catalog, kind: <blueprint>, id: <key>}`. |
+| `effects` | `change.stated`: the statement's effects, each with `kind`, `subject`, `path`, `size`, `undo`, and `claim` (its `from`), and no verdict. `change.observed`: its sights, each with `kind`, `subject`, `path`, and `verdict`. |
+| `change.after_hash` | The statement's `digest`, on every event. |
+| `labels` | `change.stated`: `applier`, and `writer` (the writer's name). `change.routed`: `route` (`no_one` or `people`), `quorum` when it goes to people, `judge` and `pack` (the judge's name and pack) when a judge answered, and `draft.<pack>` set to each draft's route. `change.decided`: `answer` (`yes` or `no`). `change.ended`: `check` (`matched`, `differed`, or `unchecked`). |
+
+A label key is a lowercase slug of at most 64 characters, so a draft's
+pack name is one too. Nothing else of a change event is posted: no
+grants, reasons, signals, or incidents. Worked examples are
+`schema/examples/change-*.json`.
+
+### Proof
+
+Annals counts what the watch saw as it stores each `change.observed`
+record, by effect kind, the subject's blueprint, and the path. A change
+counts once for each key it was seen under, by the worst of its
+sightings: `harm`, then `blind`, then `clean`. A read of one key reads
+those counts, never the records, and retention never prunes them.
 
 ## Posting
 
@@ -123,10 +181,11 @@ to 1000. Unknown fields are refused.
 | `401` | No token, or a revoked one. |
 
 Refusal reasons: `source_mismatch`, `missing_at`, `id_set`, `bad_corrects`,
-`bad_cause`, `bad_actor_kind`, `missing_actor_id`, `bad_on_behalf_of`,
+`bad_cause`, `bad_cause_source`, `bad_actor_kind`, `missing_actor_id`, `bad_on_behalf_of`,
 `bad_runtime`, `bad_outcome`, `missing_reason`, `bad_slug`,
 `missing_<field>`, `too_long`, `bad_text`, `bad_email`, `email_in_text`,
-`bad_party_kind`, `too_many_parties`, `too_many_items`, `bad_label`,
+`bad_party_kind`, `too_many_parties`, `too_many_items`, `too_many_effects`,
+`bad_size`, `bad_undo`, `bad_claim`, `bad_verdict`, `bad_label`,
 `too_many_labels`, `too_many_scopes`, `bad_approval`, `bad_json`. Each counts
 in `annals.events.refused`.
 
@@ -134,8 +193,12 @@ in `annals.events.refused`.
 
 `GET /v1/events` takes `since`, `until` (RFC 3339 or a span back from now
 such as `24h` or `7d`), `actor`, `party` (an id, email, or ref), `source`,
-`system`, `outcome`, `verb`, `kind`, `target`, `cause` (with `source`, the
-records a key caused), `approval=required`, `limit` (50, at most 500), and
+`system`, `outcome`, `verb`, `kind`, `target`, `cause` and `cause_source`
+(together, the records an event caused, from every sender; a record whose
+cause names no source has its own), `approval=required`, `limit` (50, at most 500), and
 `cursor` from the previous page's `next`. `GET /v1/events/{id}` returns one.
-`GET /v1/stats` is Annals at a glance. Every read answers at the
+`GET /v1/stats` is Annals at a glance. `GET /v1/proof?kind=&blueprint=&path=`
+answers for one key, from the counts above: `{kind, blueprint, path,
+watched, clean, harm, blind, last_seen}`, with `last_seen` left out when
+nothing was watched. Add `source` to count only what one sender saw. Every read answers at the
 token's level. The same filters are the MCP tool `annals_search` at `/mcp`.
