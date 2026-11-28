@@ -47,6 +47,9 @@ type Settings struct {
 	// Kinds names each effect kind's family: the suite's base kinds and the
 	// estate's own.
 	Kinds *change.Kinds
+	// Pack is the path of the estate's gate pack the kinds were read
+	// from; empty when only the base kinds are known.
+	Pack string
 	// MaxBlind is the share of the changes that ran, in percent, that a
 	// family's watch may fail to see and still be scored.
 	MaxBlind int

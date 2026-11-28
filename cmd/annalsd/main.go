@@ -50,6 +50,7 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	log.Info("gate kinds read", "pack", gateSettings.Pack, "kinds", gateSettings.Families(), "max_blind", gateSettings.MaxBlind)
 	cfg := server.Config{
 		PublicURL:  os.Getenv("PUBLIC_URL"),
 		ReaderRole: env("READER_ROLE", "Reader"),

@@ -3,6 +3,7 @@ package gate
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/orchard-suite/platformkit/v3/change"
@@ -19,8 +20,11 @@ func TestSettingsReadThePack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.MaxBlind != 10 {
-		t.Errorf("max blind: %d", s.MaxBlind)
+	if s.MaxBlind != 10 || s.Pack != "testdata/acme-gate.yaml" {
+		t.Errorf("max blind %d, pack %q", s.MaxBlind, s.Pack)
+	}
+	if !slices.Contains(s.Families(), "signs_in=exposure") {
+		t.Errorf("the families name the pack's kind: %v", s.Families())
 	}
 	fams, _ := score(t, s, ch{key: "a", at: tue, kinds: []string{"signs_in"}, route: "people", ended: "ok"})
 	if r := row(t, fams, thisWeek, change.FamilyExposure); r.Changes != 1 {

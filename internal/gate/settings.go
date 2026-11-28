@@ -24,6 +24,7 @@ func ReadSettings(getenv func(string) string) (Settings, error) {
 		if s.Kinds, err = change.PackKinds(data); err != nil {
 			return s, fmt.Errorf("GATE_PACK %s: %w", path, err)
 		}
+		s.Pack = path
 	}
 	if v := getenv("GATE_MAX_BLIND"); v != "" {
 		n, err := strconv.Atoi(v)
@@ -33,4 +34,17 @@ func ReadSettings(getenv func(string) string) (Settings, error) {
 		s.MaxBlind = n
 	}
 	return s, nil
+}
+
+// Families is each effect kind the score knows, with its family, as
+// kind=family by kind: what a start log says the gate counts by.
+func (s Settings) Families() []string {
+	if s.Kinds == nil {
+		return nil
+	}
+	var out []string
+	for _, k := range s.Kinds.All() {
+		out = append(out, k.Name+"="+k.Family)
+	}
+	return out
 }
