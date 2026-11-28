@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0](https://github.com/orchard-suite/annals/compare/v1.1.0...v1.2.0) (2026-11-28)
+
+### Features
+
+* **annals:** keep whole change statements ([36842d3](https://github.com/orchard-suite/annals/commit/36842d3c633d27fd115e1b56eec494fd4f50884b))
+
 ## [1.1.0](https://github.com/orchard-suite/annals/compare/v1.0.2...v1.1.0) (2026-11-27)
 
 ### Features
