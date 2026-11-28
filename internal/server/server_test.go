@@ -547,7 +547,7 @@ func TestAPIKeepsTheWholeStatement(t *testing.T) {
 	}
 	ev := p.Events[0]
 	if ev.Statement == nil || len(ev.Statement.Unknown) != 1 || ev.Statement.Unknown[0].Part != "site_config.cors" ||
-		ev.Statement.Writer.Version != "3.1.0" || ev.Statement.Artifact.Kind != "plan" || ev.Effects[0].ClaimRule != "app-settings-restart" {
+		ev.Statement.Writer.Version != "3.1.0" || len(ev.Statement.Things) != 1 || ev.Statement.Artifact.Kind != "plan" || ev.Effects[0].ClaimRule != "app-settings-restart" {
 		t.Fatalf("the record lost part of its statement: %s", body)
 	}
 	posted := example(t, "change-stated")

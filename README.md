@@ -22,7 +22,7 @@ with what authority and approval (`authority`), did what to what and how it
 went (`action`), with whom (`parties`), touching what else (`items`), set
 off by which earlier record, from any sender (`cause`, `cause_source`),
 what a change did to each live thing by kind (`effects`), the rest of a stated change's
-statement (`statement`: its key, writer, artifact, and unknown parts), what changed by hash (`change`), in
+statement (`statement`: its key, writer, every thing, artifact, and unknown parts), what changed by hash (`change`), in
 which trace (`trace_id`), sent by which product (`source`). Names and ids,
 never content or a secret; people only in person fields; records are
 append-only and a correction is a new record. The contract is

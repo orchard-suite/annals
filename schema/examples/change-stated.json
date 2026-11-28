@@ -18,6 +18,7 @@
   "statement": {
     "key": "plan-7f3a2c",
     "writer": { "name": "infra", "version": "3.1.0" },
+    "things": [ { "blueprint": "workload", "key": "acme-api-prod" } ],
     "artifact": { "kind": "plan", "digest": "sha256:9f2c4b1e7a6d3c5b8e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d" },
     "unknown": [
       { "thing": { "blueprint": "workload", "key": "acme-api-prod" }, "part": "site_config.cors", "why": "unnamed" }

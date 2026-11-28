@@ -135,11 +135,9 @@ verdict.
 ## Statement
 
 A `change.stated` record keeps the whole change statement, so a judge can
-replay it later exactly as it was stated. The actor, the catalog items,
-the effects, and the `applier` label hold their parts of it; `statement`
-holds the rest, in the platform kit's own `change` shapes and held to its
-rules. A statement may name up to 1000 things, and `items` holds at most
-100, so a record keeps the first 100. Each name, key, and version in it is at most 256 characters, one
+replay it later exactly as it was stated. The actor, the effects, and the
+`applier` label hold their parts of it; `statement` holds the rest, in the
+platform kit's own `change` shapes and held to its rules and limits. Each name, key, and version in it is at most 256 characters, one
 line, never an email address, never a value (no `=`), and never what
 reads as a key or a token.
 
@@ -147,11 +145,13 @@ reads as a key or a token.
 |---|---|
 | `key` | Required. The writer's own key for the change. |
 | `writer` | Required. The tool that wrote the statement: its `name` (a slug) and `version`. |
+| `things` | Optional, at most 1000, each once. Every catalog entity the change touches: its `blueprint` (a slug) and `key`. A record's `items` hold at most 100, so they are the first 100 of these, for the index. |
 | `artifact` | Required. The exact thing that will run: its `kind` (a slug, such as `plan` or `image`) and `digest` (`sha256:` and 64 lowercase hex characters). |
 | `unknown` | Optional, at most 1000. Each part the writer saw change and could not name an effect for, or could not read: the `thing` it is on (`blueprint` and `key`, optional), the `part` (such as a resource's attribute, never its value), and `why` (`unread` or `unnamed`). |
 
 A record stored before events had a statement part reads as it always
-did, with no `statement` and no claim rules. The platform kit's
+did, with no `statement` and no claim rules, and a statement part with no
+`things` takes its things from the catalog items. The platform kit's
 `Event.StatementOf` rebuilds the statement from a record.
 
 ## Change events
@@ -172,9 +172,9 @@ posts each to Annals as one event, mapped like this:
 | `action.target` | `{system: orrery, kind: change, id: <the key of the change.stated event>}`, the same on all five. |
 | `action.outcome` | `ok`, except `change.ended`, which takes its own outcome (`ok`, `failed`, or `refused`) with a `reason` when it is not `ok`, such as which statement fields differed. |
 | `cause`, `cause_source` | `of.key` and `of.sender`, on every event but `change.stated`. |
-| `items` | `change.stated` only: each of the statement's things as `{system: catalog, kind: <blueprint>, id: <key>}`. |
+| `items` | `change.stated` only: the statement's first 100 things, each as `{system: catalog, kind: <blueprint>, id: <key>}`. |
 | `effects` | `change.stated`: the statement's effects, each with `kind`, `subject`, `path`, `size`, `undo`, `claim` (its `from`), `claim_rule` and `claim_version` (its `rule` and `version`), and no verdict. `change.observed`: its sights, each with `kind`, `subject`, `path`, and `verdict`. |
-| `statement` | `change.stated` only: the statement's `key`, `writer`, `artifact`, and `unknown`. |
+| `statement` | `change.stated` only: the statement's `key`, `writer`, `things`, `artifact`, and `unknown`. |
 | `change.after_hash` | The statement's `digest`, on every event. |
 | `labels` | `change.stated`: `applier`, and `writer` (the writer's name). `change.routed`: `route` (`no_one` or `people`), `quorum` when it goes to people, `judge` and `pack` (the judge's name and pack) when a judge answered, and `draft.<pack>` set to each draft's route. `change.decided`: `answer` (`yes` or `no`). `change.ended`: `check` (`matched`, `differed`, or `unchecked`). |
 
@@ -215,7 +215,7 @@ Refusal reasons: `source_mismatch`, `missing_at`, `id_set`, `bad_corrects`,
 `too_many_labels`, `too_many_scopes`, `bad_approval`, `bad_json`, and, for a
 statement and a claim's rule and version, the platform kit's own:
 `email_in_name`, `value_in_name`, `secret_in_name`, `bad_digest`,
-`bad_why`, and `too_many_unknown`. Each counts
+`bad_why`, `too_many_unknown`, `too_many_things`, and `duplicate_thing`. Each counts
 in `annals.events.refused`.
 
 ## Reading

@@ -8,6 +8,7 @@ package contract
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -143,6 +144,17 @@ func TestStatementRefusals(t *testing.T) {
 			}
 			stmt(m)["unknown"] = parts
 		}, "too_many_unknown"},
+		{"thing with no key", func(m map[string]any) { delete(stmt(m)["things"].([]any)[0].(map[string]any), "key") }, "missing_key"},
+		{"thing named twice", func(m map[string]any) {
+			stmt(m)["things"] = append(stmt(m)["things"].([]any), stmt(m)["things"].([]any)[0])
+		}, "duplicate_thing"},
+		{"too many things", func(m map[string]any) {
+			things := make([]any, annals.MaxThings+1)
+			for i := range things {
+				things[i] = map[string]any{"blueprint": "workload", "key": fmt.Sprintf("acme-%d", i)}
+			}
+			stmt(m)["things"] = things
+		}, "too_many_things"},
 		{"claim rule an email", func(m map[string]any) {
 			m["effects"].([]any)[0].(map[string]any)["claim_rule"] = "ask owner@example.com"
 		}, "email_in_name"},

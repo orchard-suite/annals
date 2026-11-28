@@ -90,7 +90,8 @@ paths:
       description: >-
         Each record is the event as it was posted, at the token's level. A
         change.stated record keeps its whole statement: statement (key,
-        writer, artifact, and unknown parts) and each effect's claim,
+        writer, every thing, artifact, and unknown parts; items are only the
+        first 100 things) and each effect's claim,
         claim_rule, and claim_version. A record stored before these fields
         existed has none of them.
       tags: [events]

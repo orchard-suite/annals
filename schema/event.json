@@ -462,7 +462,7 @@
         "writer",
         "artifact"
       ],
-      "description": "What a change.stated record keeps of its statement that no other field holds, in the platform kit's change shapes. With actor, the catalog items, effects, and the applier label, it is the whole statement. Names and kinds, never a value.",
+      "description": "What a change.stated record keeps of its statement that no other field holds, in the platform kit's change shapes. With actor, effects, and the applier label, it is the whole statement. Names and kinds, never a value.",
       "properties": {
         "key": {
           "$ref": "#/$defs/plain",
@@ -482,6 +482,28 @@
             },
             "version": {
               "$ref": "#/$defs/plain"
+            }
+          }
+        },
+        "things": {
+          "type": "array",
+          "maxItems": 1000,
+          "uniqueItems": true,
+          "description": "Every catalog entity the change touches. The record's items are the first 100 of them.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "blueprint",
+              "key"
+            ],
+            "properties": {
+              "blueprint": {
+                "$ref": "#/$defs/slug"
+              },
+              "key": {
+                "$ref": "#/$defs/plain"
+              }
             }
           }
         },
