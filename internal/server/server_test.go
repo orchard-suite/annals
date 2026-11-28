@@ -529,6 +529,35 @@ func TestChangeEventsJoinAcrossSenders(t *testing.T) {
 	}
 }
 
+// A change.stated record posted over the API reads back with its whole
+// statement, so a replay rebuilds the statement its digest names.
+func TestAPIKeepsTheWholeStatement(t *testing.T) {
+	r := newRig(t)
+	b, err := os.ReadFile("../../schema/examples/change-stated.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp, body := r.do("POST", "/v1/events", r.token("orrery"), b); resp.StatusCode != http.StatusCreated {
+		t.Fatalf("post: %d %s", resp.StatusCode, body)
+	}
+	resp, body := r.do("GET", "/v1/events?verb=change.stated", r.tokenReads("trellis", "reader"), nil)
+	var p store.Page
+	if err := json.Unmarshal(body, &p); err != nil || resp.StatusCode != http.StatusOK || len(p.Events) != 1 {
+		t.Fatalf("read: %d %s", resp.StatusCode, body)
+	}
+	ev := p.Events[0]
+	if ev.Statement == nil || len(ev.Statement.Unknown) != 1 || ev.Statement.Unknown[0].Part != "site_config.cors" ||
+		ev.Statement.Writer.Version != "3.1.0" || ev.Statement.Artifact.Kind != "plan" || ev.Effects[0].ClaimRule != "app-settings-restart" {
+		t.Fatalf("the record lost part of its statement: %s", body)
+	}
+	posted := example(t, "change-stated")
+	st := ev.StatementOf()
+	st.Actor = posted.StatementOf().Actor // a reader sees the person it acts for as a ref
+	if d, err := st.Digest(); err != nil || d != ev.Change.AfterHash {
+		t.Errorf("the rebuilt statement's digest is %s (%v), the record's %s", d, err, ev.Change.AfterHash)
+	}
+}
+
 // GET /v1/proof answers for one key from what the watch saw, to a token.
 func TestAPIProof(t *testing.T) {
 	r := newRig(t)

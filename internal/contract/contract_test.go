@@ -70,11 +70,7 @@ func TestExamplesMatchSchemaAndValidator(t *testing.T) {
 func TestRefusals(t *testing.T) {
 	schema := loadSchema(t)
 	base := examples(t)["beacon.json"]
-	cases := []struct {
-		name   string
-		mutate func(m map[string]any)
-		reason string
-	}{
+	cases := []refusal{
 		{"unknown actor kind", func(m map[string]any) { m["actor"].(map[string]any)["kind"] = "robot" }, "bad_actor_kind"},
 		{"no actor id", func(m map[string]any) { delete(m["actor"].(map[string]any), "id") }, "missing_actor_id"},
 		{"bad outcome", func(m map[string]any) { m["action"].(map[string]any)["outcome"] = "maybe" }, "bad_outcome"},
@@ -120,6 +116,51 @@ func TestRefusals(t *testing.T) {
 		{"effect claim unknown", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["claim"] = "guess" })} }, "bad_claim"},
 		{"effect verdict unknown", func(m map[string]any) { m["effects"] = []any{effect(func(e map[string]any) { e["verdict"] = "fine" })} }, "bad_verdict"},
 	}
+	refuses(t, schema, base, cases)
+}
+
+// A change.stated record's statement part is held to the platform kit's
+// rules for a statement, by the schema and the validator alike.
+func TestStatementRefusals(t *testing.T) {
+	schema := loadSchema(t)
+	base := examples(t)["change-stated.json"]
+	stmt := func(m map[string]any) map[string]any { return m["statement"].(map[string]any) }
+	unknown := func(m map[string]any) map[string]any { return stmt(m)["unknown"].([]any)[0].(map[string]any) }
+	cases := []refusal{
+		{"statement with no key", func(m map[string]any) { delete(stmt(m), "key") }, "missing_statement_key"},
+		{"statement key an email", func(m map[string]any) { stmt(m)["key"] = "plan-for-owner@example.com" }, "email_in_name"},
+		{"writer not a slug", func(m map[string]any) { stmt(m)["writer"].(map[string]any)["name"] = "Infra" }, "bad_slug"},
+		{"writer with no version", func(m map[string]any) { delete(stmt(m)["writer"].(map[string]any), "version") }, "missing_statement_writer_version"},
+		{"artifact with no kind", func(m map[string]any) { delete(stmt(m)["artifact"].(map[string]any), "kind") }, "missing_statement_artifact_kind"},
+		{"artifact digest not sha256", func(m map[string]any) { stmt(m)["artifact"].(map[string]any)["digest"] = "md5:abc" }, "bad_digest"},
+		{"unknown part with no part", func(m map[string]any) { delete(unknown(m), "part") }, "missing_part"},
+		{"unknown part with its value", func(m map[string]any) { unknown(m)["part"] = "site_config.cors=*" }, "value_in_name"},
+		{"unknown part's why unknown", func(m map[string]any) { unknown(m)["why"] = "skipped" }, "bad_why"},
+		{"too many unknown parts", func(m map[string]any) {
+			parts := make([]any, annals.MaxUnknown+1)
+			for i := range parts {
+				parts[i] = map[string]any{"part": "tags", "why": "unread"}
+			}
+			stmt(m)["unknown"] = parts
+		}, "too_many_unknown"},
+		{"claim rule an email", func(m map[string]any) {
+			m["effects"].([]any)[0].(map[string]any)["claim_rule"] = "ask owner@example.com"
+		}, "email_in_name"},
+		{"claim version with no claim", func(m map[string]any) { delete(m["effects"].([]any)[0].(map[string]any), "claim") }, "missing_effects_claim"},
+	}
+	refuses(t, schema, base, cases)
+}
+
+type refusal struct {
+	name   string
+	mutate func(m map[string]any)
+	reason string
+}
+
+// refuses checks the schema and the validator both refuse each mutation of
+// base, the validator for the reason named.
+func refuses(t *testing.T, schema *jsonschema.Schema, base []byte, cases []refusal) {
+	t.Helper()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var m map[string]any
@@ -135,7 +176,7 @@ func TestRefusals(t *testing.T) {
 			if err := json.Unmarshal(b, &ev); err != nil {
 				t.Fatal(err)
 			}
-			err := ev.Validate("beacon")
+			err := ev.Validate(ev.Source)
 			if annals.Reason(err) != tc.reason {
 				t.Errorf("validator reason %q (%v), want %q", annals.Reason(err), err, tc.reason)
 			}
@@ -167,6 +208,13 @@ func TestChangeEventExamples(t *testing.T) {
 			t.Errorf("%s: change.after_hash is the statement's digest", name)
 		}
 		if name == "stated" {
+			st := ev.StatementOf()
+			if err := st.Validate(nil); err != nil {
+				t.Errorf("stated: the record does not rebuild a valid statement: %v", err)
+			}
+			if d, err := st.Digest(); err != nil || d != ev.Change.AfterHash {
+				t.Errorf("stated: the rebuilt statement's digest is %s (%v), the record's %s", d, err, ev.Change.AfterHash)
+			}
 			continue
 		}
 		if ev.Cause != stated.EventKey || ev.CauseFrom() != stated.Source {

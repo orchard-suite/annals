@@ -54,6 +54,28 @@
         }
       ],
       "description": "A short name or key that is never an email address."
+    },
+    "plain": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/short"
+        },
+        {
+          "not": {
+            "pattern": "[^\\s@<>\"']+@[^\\s@<>\"']+\\.[A-Za-z]{2,}"
+          }
+        },
+        {
+          "not": {
+            "pattern": "="
+          }
+        }
+      ],
+      "description": "A name, a key, or a version a statement holds: never an email address and never a value (no '='). The Go validator also refuses what reads as a key or a token."
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
     }
   },
   "properties": {
@@ -405,6 +427,14 @@
             ],
             "description": "Where a predicted effect came from."
           },
+          "claim_rule": {
+            "$ref": "#/$defs/plain",
+            "description": "The row of the table that predicted it."
+          },
+          "claim_version": {
+            "$ref": "#/$defs/plain",
+            "description": "The provider version the prediction is true for."
+          },
           "verdict": {
             "enum": [
               "clean",
@@ -412,6 +442,105 @@
               "blind"
             ],
             "description": "What the watch saw: nothing happened, the thing was hurt, or it could not look."
+          }
+        },
+        "dependentRequired": {
+          "claim_rule": [
+            "claim"
+          ],
+          "claim_version": [
+            "claim"
+          ]
+        }
+      }
+    },
+    "statement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "writer",
+        "artifact"
+      ],
+      "description": "What a change.stated record keeps of its statement that no other field holds, in the platform kit's change shapes. With actor, the catalog items, effects, and the applier label, it is the whole statement. Names and kinds, never a value.",
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/plain",
+          "description": "The writer's own key for the change."
+        },
+        "writer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "description": "The tool that wrote the statement.",
+          "properties": {
+            "name": {
+              "$ref": "#/$defs/slug"
+            },
+            "version": {
+              "$ref": "#/$defs/plain"
+            }
+          }
+        },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "digest"
+          ],
+          "description": "The exact thing that will run.",
+          "properties": {
+            "kind": {
+              "$ref": "#/$defs/slug"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "unknown": {
+          "type": "array",
+          "maxItems": 1000,
+          "description": "The parts the writer saw change and could not name an effect for, or could not read.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "part",
+              "why"
+            ],
+            "properties": {
+              "thing": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "blueprint",
+                  "key"
+                ],
+                "properties": {
+                  "blueprint": {
+                    "$ref": "#/$defs/slug"
+                  },
+                  "key": {
+                    "$ref": "#/$defs/plain"
+                  }
+                }
+              },
+              "part": {
+                "$ref": "#/$defs/plain",
+                "description": "The part that changes, never its value."
+              },
+              "why": {
+                "enum": [
+                  "unread",
+                  "unnamed"
+                ]
+              }
+            }
           }
         }
       }

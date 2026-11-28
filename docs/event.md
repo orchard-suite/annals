@@ -56,6 +56,7 @@ value.
 | `cause_source` | sender | Optional, only with `cause`. The `source` of the record `cause` names, when another sender posted it. Empty means this event's own source. |
 | `corrects` | sender | The `id` of an earlier record this one corrects. |
 | `effects` | sender | Optional, at most 1000. What a change did, or was predicted to do, to each live thing, by kind. See [Effects](#effects). |
+| `statement` | sender | Optional. What a `change.stated` record keeps of its statement that no other field holds. See [Statement](#statement). |
 | `labels` | sender | At most 16 low-cardinality string pairs, keys lowercase slugs, values under 64 characters. Never an id, a person, or a timestamp. |
 
 Short strings (`id`, `name`, `email`, keys, hashes) are at most 256
@@ -127,7 +128,31 @@ verdict.
 | `size` | Optional. How much, in the kind's own unit, a whole number never below zero. |
 | `undo` | Optional. Whether the old artifact puts it back: `yes`, `no`, or `partial`. |
 | `claim` | Optional. Where a predicted effect came from: `writer`, `estate`, or `model`. |
+| `claim_rule` | Optional, only with `claim`. The row of the table that predicted it. |
+| `claim_version` | Optional, only with `claim`. The provider version the prediction is true for. |
 | `verdict` | Optional. What the watch saw: `clean` (it looked, and nothing happened), `harm` (the thing was hurt), or `blind` (it could not look; never the same as clean). |
+
+## Statement
+
+A `change.stated` record keeps the whole change statement, so a judge can
+replay it later exactly as it was stated. The actor, the catalog items,
+the effects, and the `applier` label hold their parts of it; `statement`
+holds the rest, in the platform kit's own `change` shapes and held to its
+rules. A statement may name up to 1000 things, and `items` holds at most
+100, so a record keeps the first 100. Each name, key, and version in it is at most 256 characters, one
+line, never an email address, never a value (no `=`), and never what
+reads as a key or a token.
+
+| Field | Meaning |
+|---|---|
+| `key` | Required. The writer's own key for the change. |
+| `writer` | Required. The tool that wrote the statement: its `name` (a slug) and `version`. |
+| `artifact` | Required. The exact thing that will run: its `kind` (a slug, such as `plan` or `image`) and `digest` (`sha256:` and 64 lowercase hex characters). |
+| `unknown` | Optional, at most 1000. Each part the writer saw change and could not name an effect for, or could not read: the `thing` it is on (`blueprint` and `key`, optional), the `part` (such as a resource's attribute, never its value), and `why` (`unread` or `unnamed`). |
+
+A record stored before events had a statement part reads as it always
+did, with no `statement` and no claim rules. The platform kit's
+`Event.StatementOf` rebuilds the statement from a record.
 
 ## Change events
 
@@ -148,7 +173,8 @@ posts each to Annals as one event, mapped like this:
 | `action.outcome` | `ok`, except `change.ended`, which takes its own outcome (`ok`, `failed`, or `refused`) with a `reason` when it is not `ok`, such as which statement fields differed. |
 | `cause`, `cause_source` | `of.key` and `of.sender`, on every event but `change.stated`. |
 | `items` | `change.stated` only: each of the statement's things as `{system: catalog, kind: <blueprint>, id: <key>}`. |
-| `effects` | `change.stated`: the statement's effects, each with `kind`, `subject`, `path`, `size`, `undo`, and `claim` (its `from`), and no verdict. `change.observed`: its sights, each with `kind`, `subject`, `path`, and `verdict`. |
+| `effects` | `change.stated`: the statement's effects, each with `kind`, `subject`, `path`, `size`, `undo`, `claim` (its `from`), `claim_rule` and `claim_version` (its `rule` and `version`), and no verdict. `change.observed`: its sights, each with `kind`, `subject`, `path`, and `verdict`. |
+| `statement` | `change.stated` only: the statement's `key`, `writer`, `artifact`, and `unknown`. |
 | `change.after_hash` | The statement's `digest`, on every event. |
 | `labels` | `change.stated`: `applier`, and `writer` (the writer's name). `change.routed`: `route` (`no_one` or `people`), `quorum` when it goes to people, `judge` and `pack` (the judge's name and pack) when a judge answered, and `draft.<pack>` set to each draft's route. `change.decided`: `answer` (`yes` or `no`). `change.ended`: `check` (`matched`, `differed`, or `unchecked`). |
 
@@ -186,7 +212,10 @@ Refusal reasons: `source_mismatch`, `missing_at`, `id_set`, `bad_corrects`,
 `missing_<field>`, `too_long`, `bad_text`, `bad_email`, `email_in_text`,
 `bad_party_kind`, `too_many_parties`, `too_many_items`, `too_many_effects`,
 `bad_size`, `bad_undo`, `bad_claim`, `bad_verdict`, `bad_label`,
-`too_many_labels`, `too_many_scopes`, `bad_approval`, `bad_json`. Each counts
+`too_many_labels`, `too_many_scopes`, `bad_approval`, `bad_json`, and, for a
+statement and a claim's rule and version, the platform kit's own:
+`email_in_name`, `value_in_name`, `secret_in_name`, `bad_digest`,
+`bad_why`, and `too_many_unknown`. Each counts
 in `annals.events.refused`.
 
 ## Reading

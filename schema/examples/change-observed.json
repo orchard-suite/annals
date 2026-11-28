@@ -14,5 +14,5 @@
     { "kind": "stops", "subject": { "blueprint": "workload", "key": "acme-web" }, "path": "in-place", "verdict": "clean" },
     { "kind": "stops", "subject": { "blueprint": "workload", "key": "acme-api" }, "path": "in-place", "verdict": "blind" }
   ],
-  "change": { "after_hash": "sha256:9f2c4e7a1b3d5f60718293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7" }
+  "change": { "after_hash": "sha256:631648276c5b93648131ddef01fe2882376e690c04284e39cb0a66c048381181" }
 }

@@ -2,21 +2,27 @@
   "at": "2026-11-26T15:00:00Z",
   "source": "orrery",
   "event_key": "run:01JC0A:stated",
-  "actor": { "kind": "agent", "id": "acme-agent", "on_behalf_of": "user-0001" },
+  "actor": { "kind": "agent", "id": "agent-1", "on_behalf_of": "user@example.com" },
   "action": {
     "verb": "change.stated",
     "target": { "system": "orrery", "kind": "change", "id": "run:01JC0A:stated" },
     "outcome": "ok"
   },
   "items": [
-    { "system": "catalog", "kind": "workload", "id": "acme-web" },
-    { "system": "catalog", "kind": "identity", "id": "acme-web-id" }
+    { "system": "catalog", "kind": "workload", "id": "acme-api-prod" }
   ],
   "effects": [
-    { "kind": "stops", "subject": { "blueprint": "workload", "key": "acme-web" }, "path": "in-place", "undo": "yes", "claim": "estate" },
-    { "kind": "grants", "subject": { "blueprint": "identity", "key": "acme-web-id" }, "path": "in-place", "undo": "yes", "claim": "writer" },
-    { "kind": "costs", "subject": { "blueprint": "plan", "key": "acme-plan" }, "path": "in-place", "size": 40, "undo": "partial", "claim": "model" }
+    { "kind": "stops", "subject": { "blueprint": "workload", "key": "acme-api-prod" }, "path": "in-place", "size": 2, "undo": "yes", "claim": "writer", "claim_rule": "app-settings-restart", "claim_version": "azurerm 4.20" },
+    { "kind": "grants", "subject": { "blueprint": "workload", "key": "acme-api-prod" }, "path": "in-place", "size": 1, "undo": "yes", "claim": "writer", "claim_rule": "role-assignment" }
   ],
-  "change": { "after_hash": "sha256:9f2c4e7a1b3d5f60718293a4b5c6d7e8f9012a3b4c5d6e7f8091a2b3c4d5e6f7" },
+  "statement": {
+    "key": "plan-7f3a2c",
+    "writer": { "name": "infra", "version": "3.1.0" },
+    "artifact": { "kind": "plan", "digest": "sha256:9f2c4b1e7a6d3c5b8e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d" },
+    "unknown": [
+      { "thing": { "blueprint": "workload", "key": "acme-api-prod" }, "part": "site_config.cors", "why": "unnamed" }
+    ]
+  },
+  "change": { "after_hash": "sha256:631648276c5b93648131ddef01fe2882376e690c04284e39cb0a66c048381181" },
   "labels": { "applier": "hub", "writer": "infra" }
 }
