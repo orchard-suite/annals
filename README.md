@@ -190,7 +190,7 @@ how Graft, Ion, Microsoft 365, and a shell post.
 | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_FEDERATED_TOKEN_FILE`, `AZURE_AUTHORITY_HOST` | | The Entra app the people directory reads users as, by workload identity. The directory sync is off unless the first three are set. |
 | `DIRECTORY_INTERVAL` | `30m` | How often the directory reads the users who changed. |
 | `GRAPH_URL` | `https://graph.microsoft.com/v1.0` | |
-| `GATE_KINDS` | | A file of the estate's own effect kinds, in the platform kit's shape (`{"kinds": [...]}`), so the gate's score counts each in its family. The suite's base kinds are always known. |
+| `GATE_PACK` | | The estate's gate pack, the same file its judge runs. Annals reads only its `kinds` list, the estate's own effect kinds and their families, so the gate's score counts each in its family. The suite's base kinds are always known; a kind neither names counts as `unregistered`. |
 | `GATE_MAX_BLIND` | `20` | The percent of a family's changes that ran that its watch may fail to see, and the family still be scored. |
 | `TZ` | `UTC` | The board's time zone, such as `America/Chicago`. Days, hours, and times on the board are in it. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. `debug` logs admitted requests too. |

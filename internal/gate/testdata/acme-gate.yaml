@@ -1,0 +1,17 @@
+# An estate's gate pack, as its judge runs it. Annals reads only its kinds.
+pack: acme-gate
+title: Acme change gate
+version: 1.0.0
+family: gate
+status: draft
+kinds:
+  - name: signs_in
+    family: exposure
+    means: Who may sign in to a site or an app changes.
+    unit: principals
+params:
+  alone: {}
+rules:
+  - id: effect.signs-in
+    kind: effect
+    check: effect.size == 0

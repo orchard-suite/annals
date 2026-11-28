@@ -32,6 +32,9 @@ over MCP. Read `README.md` and `docs/event.md` first.
 - `internal/gate` scores the change gate from the change events, by week:
   per effect family the needless asks, misses, unknowns, and wait with
   their coverage, and per draft pack its asks to no one and their harm. It
+  knows the estate's own effect kinds from the estate's gate pack
+  (`GATE_PACK`, read by `ReadSettings` with the platform kit's
+  `change.PackKinds`), so the pack stays the one place they are named. It
   is pure: the store hands it the records (`Store.Changes`), and
   `internal/server/gate.go` answers it as tables on `/v1/gate/families`
   and `/v1/gate/drafts`. A person's yes is never one of its labels; only a
