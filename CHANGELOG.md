@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0](https://github.com/orchard-suite/annals/compare/v1.4.0...v1.5.0) (2026-11-28)
+
+### Features
+
+* **annals:** read the estate's kinds from its gate pack ([e78db19](https://github.com/orchard-suite/annals/commit/e78db192fbabe589afaa5ff11edb5573b70480d2))
+
 ## [1.4.0](https://github.com/orchard-suite/annals/compare/v1.3.0...v1.4.0) (2026-11-28)
 
 ### Features
