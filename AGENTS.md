@@ -109,8 +109,9 @@ over MCP. Read `README.md` and `docs/event.md` first.
 Agents push to main.
 
 Commit on `main` with conventional commits and land with `make land`
-(`make land BRANCH=<branch>` from a worktree). It runs `make check`, then
-`release-damnit land`. CI runs the same check (`.github/workflows/test.yml`)
+(`make land BRANCH=<branch>` from a worktree). `release-damnit land` runs
+the config's check, `make check`, on the tree that lands and signs a landing
+proof the release verifies. CI runs the same check (`.github/workflows/test.yml`)
 on every pull request and before every release, then versions every `feat`
 and `fix`, tags it, and builds and signs
 `ghcr.io/orchard-suite/annals:<version>` for `linux/amd64`. Never edit
@@ -122,5 +123,5 @@ and `fix`, tags it, and builds and signs
 make check
 ```
 
-Run it before every commit; `make land` runs it again before it pushes. It
+Run it before every commit; `make land` runs it again and signs its proof. It
 needs Docker and Go (see `go.mod`).

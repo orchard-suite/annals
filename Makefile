@@ -44,7 +44,7 @@ docker:
 run: build clickhouse
 	PUBLIC_URL=http://localhost:8080 CLICKHOUSE_URL=$(ANNALS_TEST_CLICKHOUSE)/annals ./dist/annalsd
 
-# Lands on main after the full check passes. From a worktree:
-# make land BRANCH=<branch>.
-land: check
+# Lands on main: release-damnit runs the config's check on the tree that
+# lands and signs its proof. From a worktree: make land BRANCH=<branch>.
+land:
 	release-damnit land $(BRANCH)
