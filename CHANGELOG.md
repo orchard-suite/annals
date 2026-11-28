@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0](https://github.com/orchard-suite/annals/compare/v1.5.0...v1.6.0) (2026-11-28)
+
+### Features
+
+* **annals:** log the kinds the gate counts by ([78b7c84](https://github.com/orchard-suite/annals/commit/78b7c84f64d39b7bccc87204b7bc61dbf8312e45))
+
 ## [1.5.0](https://github.com/orchard-suite/annals/compare/v1.4.0...v1.5.0) (2026-11-28)
 
 ### Features
