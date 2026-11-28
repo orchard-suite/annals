@@ -17,6 +17,8 @@ security:
 tags:
   - name: events
     description: Post and read events.
+  - name: gate
+    description: How the change gate scored, from what changes did.
   - name: tokens
     description: The calling token.
 paths:
@@ -283,6 +285,62 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/StoreError"
+  /v1/gate/families:
+    get:
+      operationId: getGateFamilies
+      summary: The gate's four numbers, by week and effect family
+      description: >-
+        For each week, Monday to Monday in UTC, and each effect family: the
+        changes the judge routed, the needless asks (asked, ran, and the
+        watch saw them clean), the misses (ran and did harm, routed to no
+        one or joined to an incident), the unknowns (ran, and the watch
+        could not see the family), and the wait (from an ask to its last
+        answer), with the coverage, the percent of the changes that ran
+        that the watch saw. A family whose watch was blind more than the
+        estate allows is not scored, and its needless asks and misses are
+        null. Newest week first; the newest runs through now.
+      tags: [gate]
+      parameters:
+        - $ref: "#/components/parameters/Weeks"
+      responses:
+        "200":
+          description: One row a week and family.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+        "400":
+          $ref: "#/components/responses/BadWeeks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/StoreError"
+  /v1/gate/drafts:
+    get:
+      operationId: getGateDrafts
+      summary: Each draft gate pack's replay, by week
+      description: >-
+        For each week and each draft pack whose route the judge gave beside
+        the live one: the changes it judged, the asks among them, how many
+        of those asks it would have sent to no one, how many of those did
+        harm, how many ran with no clear watch, and the coverage. Newest
+        week first.
+      tags: [gate]
+      parameters:
+        - $ref: "#/components/parameters/Weeks"
+      responses:
+        "200":
+          description: One row a week and draft pack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Table"
+        "400":
+          $ref: "#/components/responses/BadWeeks"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/StoreError"
   /v1/whoami:
     get:
       operationId: whoami
@@ -303,7 +361,23 @@ components:
       type: http
       scheme: bearer
       description: A token Annals issued on its token page. It posts as one source.
+  parameters:
+    Weeks:
+      name: weeks
+      in: query
+      description: How many weeks to cover, the current one counted, from 1 to 52. Twelve when left out.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 52
+        default: 12
   responses:
+    BadWeeks:
+      description: weeks is not a whole number from 1 to 52 (reason bad_filter).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     BadRequest:
       description: The body or the query could not be read (reason bad_json or bad_filter).
       content:
@@ -349,6 +423,32 @@ components:
           description: On a receipt only, the sender's own id for the event, when it set one.
     Event:
       $ref: "./schema/event.json"
+    Table:
+      type: object
+      description: >-
+        A table: its columns, then its rows, each a list of values in the
+        columns' order. A value that cannot be said is null.
+      required: [columns, rows]
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            required: [id]
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              unit:
+                type: string
+              decimals:
+                type: integer
+        rows:
+          type: array
+          items:
+            type: array
+            items: {}
     Receipt:
       type: object
       description: What happened to one posted event.

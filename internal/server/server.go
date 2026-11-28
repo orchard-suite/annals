@@ -22,9 +22,11 @@ import (
 	"time"
 
 	"github.com/orchard-suite/platformkit/v3/annals"
+	"github.com/orchard-suite/platformkit/v3/change"
 	"github.com/orchard-suite/platformkit/v3/door"
 	"github.com/orchard-suite/platformkit/v3/faro"
 
+	"github.com/orchard-suite/annals/internal/gate"
 	"github.com/orchard-suite/annals/internal/metrics"
 	"github.com/orchard-suite/annals/internal/people"
 	"github.com/orchard-suite/annals/internal/retention"
@@ -52,7 +54,10 @@ type Config struct {
 	// "vault" in "vault.reveal_secret": a sentence on the board leaves them
 	// out, as it does "entity", "record", and "item".
 	AreaWords []string
-	Version   string
+	// Gate scores the change gate: the effect kinds the estate names and
+	// how blind a family's watch may be and still be scored.
+	Gate    gate.Settings
+	Version string
 }
 
 type Server struct {
@@ -67,6 +72,8 @@ type Server struct {
 	readers *door.Gate
 	admins  *door.Gate
 	relay   *faro.Relay
+	// now is the clock a gate score reads its weeks by.
+	now func() time.Time
 }
 
 // New builds the server. audit keeps Annals' own records of tokens
@@ -86,6 +93,9 @@ func New(cfg Config, st *store.Store, m *metrics.Metrics, audit *selfaudit.Audit
 	}
 	if cfg.AdminRole == "" {
 		cfg.AdminRole = "Admin"
+	}
+	if cfg.Gate.Kinds == nil {
+		cfg.Gate.Kinds = change.Base()
 	}
 	readers, err := door.NewGate(log, cfg.ReaderRole, cfg.PIIRole, cfg.AdminRole)
 	if err != nil {
@@ -109,6 +119,7 @@ func New(cfg Config, st *store.Store, m *metrics.Metrics, audit *selfaudit.Audit
 		readers:      readers,
 		admins:       admins,
 		relay:        relay,
+		now:          time.Now,
 	}, nil
 }
 

@@ -81,7 +81,8 @@ API: `POST /v1/events` (one or a batch, idempotent by `source` plus
 `event_key`), `GET /v1/events` with `since`, `until`, `actor`, `source`,
 `system`, `outcome`, `verb`, `party`, `cause`, `cause_source`, paged by cursor, `GET /v1/events/{id}`,
 `GET /v1/stats`, `GET /v1/proof` (what the watch saw for one effect kind,
-blueprint, and path), `GET /v1/whoami`, and `/mcp` (streamable HTTP) with
+blueprint, and path), `GET /v1/gate/families` and `GET /v1/gate/drafts`
+(how the change gate scored, as tables; see [The gate's score](#the-gates-score)), `GET /v1/whoami`, and `/mcp` (streamable HTTP) with
 `annals_search`, `annals_actor_summary`, `annals_target_history`.
 
 Board: Today, a window (24 hours, 7 days, 30 days, or all time) read as
@@ -97,6 +98,42 @@ scoped to them. Then the Approvals view, and Tokens (issue for a source at
 a read level, see the secret once, revoke). Light and dark, phone-first,
 with tabs along the bottom on a phone. Times are in the server's `TZ`. Browser telemetry
 through `POST /api/telemetry` as `annals-web`.
+
+## The gate's score
+
+The change gate learns from what changes did, never from a person's yes.
+Annals scores it from the change events it keeps, one row a week (Monday
+to Monday, UTC; the newest runs through now), for the weeks asked
+(`weeks`, 12 unless set, at most 52).
+
+`GET /v1/gate/families` is one row a week and effect family, for every
+change the judge routed with an effect of that family:
+
+| Column | What it counts |
+|---|---|
+| `changes`, `asks`, `ran` | The changes, those routed to people, and those applied. |
+| `needless` | Asked of people, ran, and the watch saw the family clean. |
+| `misses` | Ran and did harm, and went to no one or had an incident joined to it. |
+| `unknowns` | Ran, and the watch could not see the family: blind, or never watched. |
+| `coverage` | The percent of the changes that ran that the watch saw. |
+| `wait_median`, `wait_hours`, `waited` | From each ask to its last answer: the median minutes, the sum in hours, and how many asks were answered. |
+| `score` | `scored`; `too blind`, when more than `GATE_MAX_BLIND` percent of what ran was unknown; or `nothing ran`. A family not scored shows no needless asks and no misses. |
+
+An incident joined to a change is harm for every family the change has.
+A kind the watch cannot see, such as a grant, leaves its family unknown,
+because blind is never clean.
+
+`GET /v1/gate/drafts` is one row a week and draft gate pack, from the
+route each draft gave beside the live one (`draft.<pack>` on
+`change.routed`): the changes it `judged`, the `asks` among them, how many
+of those it would have sent to no one (`to_no_one`), how many of those did
+harm (`harmed`), how many ran with no clear watch (`unseen`), and the
+`coverage`.
+
+Both answer a table, `{columns, rows}`: each column its `id`, `title`, and
+`unit` and `decimals` where it has them, and each row its values in that
+order, null where a value cannot be said. They answer counts, never a
+record or a person, to any token.
 
 ## Annals' own records
 
@@ -153,6 +190,8 @@ how Graft, Ion, Microsoft 365, and a shell post.
 | `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_FEDERATED_TOKEN_FILE`, `AZURE_AUTHORITY_HOST` | | The Entra app the people directory reads users as, by workload identity. The directory sync is off unless the first three are set. |
 | `DIRECTORY_INTERVAL` | `30m` | How often the directory reads the users who changed. |
 | `GRAPH_URL` | `https://graph.microsoft.com/v1.0` | |
+| `GATE_KINDS` | | A file of the estate's own effect kinds, in the platform kit's shape (`{"kinds": [...]}`), so the gate's score counts each in its family. The suite's base kinds are always known. |
+| `GATE_MAX_BLIND` | `20` | The percent of a family's changes that ran that its watch may fail to see, and the family still be scored. |
 | `TZ` | `UTC` | The board's time zone, such as `America/Chicago`. Days, hours, and times on the board are in it. |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, or `error`. `debug` logs admitted requests too. |
 

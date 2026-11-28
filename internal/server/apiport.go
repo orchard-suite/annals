@@ -35,6 +35,8 @@ func (s *Server) API() http.Handler {
 	mux.Handle("GET /v1/events/{id}", s.sender(s.apiGet))
 	mux.Handle("GET /v1/stats", s.sender(s.apiStats))
 	mux.Handle("GET /v1/proof", s.sender(s.apiProof))
+	mux.Handle("GET /v1/gate/families", s.sender(s.apiGateFamilies))
+	mux.Handle("GET /v1/gate/drafts", s.sender(s.apiGateDrafts))
 	mux.Handle("GET /v1/whoami", s.sender(s.apiWhoami))
 	mcp := annalsmcp.Handler(s.store, s.cfg.Version)
 	mux.Handle("/mcp", s.sender(func(w http.ResponseWriter, r *http.Request, tok store.Token) {

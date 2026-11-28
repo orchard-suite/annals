@@ -29,6 +29,13 @@ over MCP. Read `README.md` and `docs/event.md` first.
   writer, claims each key in memory while writing it, and looks it up
   first. Tests run on a real ClickHouse that `make check` starts in Docker
   (`internal/store/storetest`).
+- `internal/gate` scores the change gate from the change events, by week:
+  per effect family the needless asks, misses, unknowns, and wait with
+  their coverage, and per draft pack its asks to no one and their harm. It
+  is pure: the store hands it the records (`Store.Changes`), and
+  `internal/server/gate.go` answers it as tables on `/v1/gate/families`
+  and `/v1/gate/drafts`. A person's yes is never one of its labels; only a
+  sight's verdict and a joined incident are.
 - `internal/people` decides what a caller sees of people: a reader sees
   each person as a ref, a PII reader and an admin see the person. Every
   read on both ports goes through it, and a reader's filters match refs
@@ -41,7 +48,7 @@ over MCP. Read `README.md` and `docs/event.md` first.
   (Graph's user delta query) when the pod signs in by workload identity.
   `internal/graph` is the Graph client it and the collector share.
 - `internal/server` answers on two ports, one per kind of caller:
-  - `API` (8081): `/v1/events`, `/v1/stats`, `/v1/proof`, `/mcp`, `/healthz`. Trusts
+  - `API` (8081): `/v1/events`, `/v1/stats`, `/v1/proof`, `/v1/gate/*`, `/mcp`, `/healthz`. Trusts
     only a bearer token Annals issued; `/healthz` is open.
   - `Session` (8080): the board and token administration. Trusts the front
     door's `X-Forwarded-Email` and `X-Forwarded-Groups`; only Traefik may

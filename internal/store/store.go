@@ -931,3 +931,26 @@ func decodeCursor(c string) (atMs int64, id string, ok bool) {
 	n, err := strconv.ParseInt(at, 10, 64)
 	return n, id, err == nil
 }
+
+// Changes returns every record of the verbs given since a time, oldest
+// first, for a reader that joins a change's events itself.
+func (s *Store) Changes(ctx context.Context, verbs []string, since time.Time) ([]annals.Event, error) {
+	rows, err := s.conn.Query(ctx, `SELECT body FROM records WHERE verb IN ? AND at >= fromUnixTimestamp64Milli(?, 'UTC') ORDER BY at, id`, verbs, ms(since))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []annals.Event
+	for rows.Next() {
+		var body string
+		if err := rows.Scan(&body); err != nil {
+			return nil, err
+		}
+		var ev annals.Event
+		if err := json.Unmarshal([]byte(body), &ev); err != nil {
+			return nil, err
+		}
+		out = append(out, ev)
+	}
+	return out, rows.Err()
+}

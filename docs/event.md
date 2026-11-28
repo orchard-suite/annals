@@ -229,5 +229,7 @@ cause names no source has its own), `approval=required`, `limit` (50, at most 50
 `GET /v1/stats` is Annals at a glance. `GET /v1/proof?kind=&blueprint=&path=`
 answers for one key, from the counts above: `{kind, blueprint, path,
 watched, clean, harm, blind, last_seen}`, with `last_seen` left out when
-nothing was watched. Add `source` to count only what one sender saw. Every read answers at the
+nothing was watched. Add `source` to count only what one sender saw. `GET /v1/gate/families`
+and `GET /v1/gate/drafts` score the change gate from the change events, by
+week: the README's "The gate's score" says what each column counts. Every read answers at the
 token's level. The same filters are the MCP tool `annals_search` at `/mcp`.

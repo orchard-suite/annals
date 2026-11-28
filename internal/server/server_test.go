@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -580,5 +581,53 @@ func TestAPIProof(t *testing.T) {
 	}
 	if resp, _ := r.do("GET", "/v1/proof?kind=stops&blueprint=workload&path=in-place", "", nil); resp.StatusCode != http.StatusUnauthorized {
 		t.Errorf("proof with no token: %d", resp.StatusCode)
+	}
+}
+
+// GET /v1/gate/families and /v1/gate/drafts score the weeks from the
+// change events, as tables, to a token.
+func TestAPIGate(t *testing.T) {
+	r := newRig(t)
+	r.srv.now = func() time.Time { return time.Date(2026, 11, 27, 12, 0, 0, 0, time.UTC) }
+	r.ingest("change-stated", "change-routed", "change-decided", "change-ended", "change-observed")
+	tok := r.token("reader")
+	var fams struct {
+		Columns []struct{ ID string }
+		Rows    [][]any
+	}
+	resp, body := r.do("GET", "/v1/gate/families?weeks=2", tok, nil)
+	if err := json.Unmarshal(body, &fams); err != nil || resp.StatusCode != http.StatusOK || len(fams.Rows) != 4 {
+		t.Fatalf("families: %d %s", resp.StatusCode, body)
+	}
+	cell := func(row []any, id string) any {
+		for i, c := range fams.Columns {
+			if c.ID == id {
+				return row[i]
+			}
+		}
+		t.Fatalf("no column %s", id)
+		return nil
+	}
+	got := map[string]string{}
+	for _, row := range fams.Rows {
+		if cell(row, "week") == "2026-11-23T00:00:00Z" {
+			got[cell(row, "family").(string)] = fmt.Sprint(cell(row, "score"), " ", cell(row, "changes"), " ", cell(row, "asks"), " ", cell(row, "unknowns"), " ", cell(row, "wait_median"))
+		}
+	}
+	// The example's one stops sight is clean and the other blind, so its
+	// disruption is unknown; its grant is never watched.
+	want := map[string]string{"disruption": "too blind 1 1 1 9.6", "exposure": "too blind 1 1 1 9.6"}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("this week: %v, want %v", got, want)
+	}
+	resp, body = r.do("GET", "/v1/gate/drafts?weeks=2", tok, nil)
+	if resp.StatusCode != http.StatusOK || !strings.Contains(string(body), `"acme-gate-next",1,1,1,0,1,0]`) {
+		t.Errorf("drafts: %d %s", resp.StatusCode, body)
+	}
+	if resp, _ := r.do("GET", "/v1/gate/families?weeks=53", tok, nil); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("53 weeks: %d", resp.StatusCode)
+	}
+	if resp, _ := r.do("GET", "/v1/gate/drafts", "", nil); resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("no token: %d", resp.StatusCode)
 	}
 }

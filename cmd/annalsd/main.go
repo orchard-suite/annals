@@ -4,19 +4,23 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	// The board shows times in TZ, so the image carries the zone database.
 	_ "time/tzdata"
 
+	"github.com/orchard-suite/platformkit/v3/change"
 	"github.com/orchard-suite/platformkit/v3/telemetry"
 
 	"github.com/orchard-suite/annals/internal/directory"
+	"github.com/orchard-suite/annals/internal/gate"
 	"github.com/orchard-suite/annals/internal/graph"
 	"github.com/orchard-suite/annals/internal/metrics"
 	"github.com/orchard-suite/annals/internal/retention"
@@ -44,6 +48,10 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	gateSettings, err := gateSettings()
+	if err != nil {
+		return err
+	}
 	cfg := server.Config{
 		PublicURL:  os.Getenv("PUBLIC_URL"),
 		ReaderRole: env("READER_ROLE", "Reader"),
@@ -53,6 +61,7 @@ func run(log *slog.Logger) error {
 		FaroKey:    os.Getenv("FARO_API_KEY"),
 		Retention:  policy,
 		AreaWords:  strings.Split(os.Getenv("AREA_WORDS"), ","),
+		Gate:       gateSettings,
 		Version:    version,
 	}
 	dsn := os.Getenv("CLICKHOUSE_URL")
@@ -150,6 +159,32 @@ func syncDirectory(ctx context.Context, st *store.Store, m *metrics.Metrics, log
 	log.Info("directory sync on", "interval", interval.String(), "people", st.Directory().People())
 	go sync.Run(ctx, interval)
 	return nil
+}
+
+// gateSettings reads how the gate is scored: GATE_KINDS, a file of the
+// estate's own effect kinds in the platform kit's shape, and GATE_MAX_BLIND,
+// the percent of the changes that ran a family's watch may fail to see and
+// still be scored.
+func gateSettings() (gate.Settings, error) {
+	s := gate.Settings{Kinds: change.Base(), MaxBlind: 20}
+	if path := os.Getenv("GATE_KINDS"); path != "" {
+		f, err := os.Open(path)
+		if err != nil {
+			return s, fmt.Errorf("GATE_KINDS: %w", err)
+		}
+		defer f.Close()
+		if s.Kinds, err = change.LoadKinds(f); err != nil {
+			return s, fmt.Errorf("GATE_KINDS: %w", err)
+		}
+	}
+	if v := os.Getenv("GATE_MAX_BLIND"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 || n > 100 {
+			return s, errors.New("GATE_MAX_BLIND must be a whole percent from 0 to 100")
+		}
+		s.MaxBlind = n
+	}
+	return s, nil
 }
 
 func env(key, fallback string) string {
